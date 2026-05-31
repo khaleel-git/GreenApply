@@ -41,25 +41,6 @@ export function runHardFilters(
     }
   }
 
-  // Visa blocked
-  if (extraction.visa.value === false && profile.workAuth === 'needs_sponsorship') {
-    const evidence = extraction.visa.evidence.join(' | ')
-    filters.push({
-      type: 'visa_blocked',
-      severity: 'blocker',
-      message: `No visa sponsorship${evidence ? ` — "${evidence}"` : ''}`,
-    })
-  }
-
-  // Work auth: "must have work permit" + user needs sponsorship
-  if (extraction.visa.value === false && profile.workAuth === 'student_visa') {
-    filters.push({
-      type: 'visa_blocked',
-      severity: 'warning',
-      message: 'Job may require existing work authorization — verify visa requirements',
-    })
-  }
-
   // Employment type mismatch — skip when type is 'unknown' (no pattern matched)
   if (
     extraction.employmentType &&

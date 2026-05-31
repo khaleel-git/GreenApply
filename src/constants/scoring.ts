@@ -1,9 +1,8 @@
 export const SCORE_WEIGHTS = {
-  skills: 0.30,
-  experience: 0.22,
-  language: 0.20,
-  location: 0.10,
-  visaCompatibility: 0.08,
+  skills: 0.33,
+  experience: 0.24,
+  language: 0.22,
+  location: 0.11,
   salaryMatch: 0.05,
   employmentType: 0.05,
 } as const

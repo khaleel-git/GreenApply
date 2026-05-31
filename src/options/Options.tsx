@@ -117,6 +117,7 @@ function ResumeSection() {
         profile: {
           resume,
           languages: resume.languages,
+          skills: resume.skills,  // pre-populate editable skills field from resume
         },
       })
       setStatus('done')

@@ -5,7 +5,6 @@ import { RecommendationBadge } from './components/RecommendationBadge'
 import { HardFilterAlert } from './components/HardFilterAlert'
 import { SkillGapList } from './components/SkillGapList'
 import { JobFreshness } from './components/JobFreshness'
-import { ConfidenceCaveat } from './components/ConfidenceCaveat'
 import { ActionButtons } from './components/ActionButtons'
 import { GeneratePanel } from './components/GeneratePanel'
 import { TrackingDropdown } from './components/TrackingDropdown'
@@ -180,11 +179,6 @@ function ResultState({
       {/* Language requirements — always shown when detected, met or not */}
       {match.skillGap.languageGaps.length > 0 && (
         <LanguageRequirements gaps={match.skillGap.languageGaps} />
-      )}
-
-      {/* Confidence caveats */}
-      {extraction && (
-        <ConfidenceCaveat visa={extraction.visa} confidence={extraction.confidence} />
       )}
 
       {/* Skill gap */}

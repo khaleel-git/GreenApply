@@ -118,7 +118,7 @@ export function parseResumeDeterministic(
   fileName: string,
   fileType: 'pdf' | 'docx',
 ): ResumeProfile {
-  const { required: skills } = extractSkills(raw)
+  const { required: skills } = extractSkills(raw, false)  // resume: no context check needed
   const languages = extractResumeLanguages(raw)
   const experience = parseExperienceEntries(raw)
   const totalExperienceYears = computeMergedExperienceYears(experience)

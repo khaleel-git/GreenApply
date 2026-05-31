@@ -44,7 +44,9 @@ function hasSkillContext(text: string, matchIndex: number): boolean {
   return SKILL_CONTEXT_RE.test(window)
 }
 
-export function extractSkills(text: string): { required: string[]; niceToHave: string[] } {
+// requireContext: true for job descriptions (prevents navigation/sidebar false positives)
+//                false for resumes (any mention counts — resume text has no ATS sidebar noise)
+export function extractSkills(text: string, requireContext = true): { required: string[]; niceToHave: string[] } {
   const required: string[] = []
   const niceToHave: string[] = []
 
@@ -52,7 +54,7 @@ export function extractSkills(text: string): { required: string[]; niceToHave: s
     const rx = buildSkillRegex(skill)
     const match = rx.exec(text)
     if (match) {
-      if (!hasSkillContext(text, match.index)) continue  // no requirements context → skip
+      if (requireContext && !hasSkillContext(text, match.index)) continue
       if (isNiceToHave(text, match.index)) {
         niceToHave.push(skill)
       } else {

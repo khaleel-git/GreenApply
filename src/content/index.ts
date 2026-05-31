@@ -64,13 +64,17 @@ function handleNavigation(): void {
     overlayMounted = true
   }
 
-  chrome.runtime.sendMessage({ type: 'JOB_DETECTED', payload: raw })
+  chrome.runtime.sendMessage({ type: 'JOB_DETECTED', payload: raw }).catch(() => {})
 }
 
-// Receive match results and extraction data pushed from service worker
-chrome.runtime.onMessage.addListener((msg: ContentMessage) => {
-  window.dispatchEvent(new CustomEvent('greenapply:message', { detail: msg }))
-})
+// Receive match results pushed from service worker.
+// Guard against "Extension context invalidated" when the extension is reloaded
+// while the page is still open — the listener will simply stop working silently.
+try {
+  chrome.runtime.onMessage.addListener((msg: ContentMessage) => {
+    window.dispatchEvent(new CustomEvent('greenapply:message', { detail: msg }))
+  })
+} catch { /* extension reloaded — content script orphaned, ignore */ }
 
 startObserver(handleNavigation)
 startFeedAnnotation()

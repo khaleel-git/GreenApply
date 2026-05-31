@@ -38,7 +38,7 @@ export async function handleSaveProfile(partial: Partial<UserProfile>): Promise<
   await clearMatches()
 
   if (!existing && partial.resume) {
-    const rules = generateDefaultRules(profile.workAuth)
+    const rules = generateDefaultRules()
     for (const rule of rules) await saveRule(rule)
   }
 }

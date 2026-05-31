@@ -1,5 +1,5 @@
 import type { ExtractionResult, JobListing, ResumeProfile, UserPreferences, ScoreBreakdown, MatchResult, UserProfile } from '../../types'
-import { SCORE_WEIGHTS, SCORE_THRESHOLDS, TIME_SAVED_PER_SKIP_MINUTES } from '../../constants/scoring'
+import { SCORE_WEIGHTS, SCORE_THRESHOLDS } from '../../constants/scoring'
 import { computeFreshnessModifier } from './freshness'
 import { runHardFilters } from './hard-filters'
 
@@ -56,15 +56,6 @@ function employmentTypeScore(type: string, preferred: UserPreferences['jobTypes'
   return preferred.includes(type as never) ? 100 : 20
 }
 
-function visaScore(visa: ExtractionResult['visa'], workAuth: UserProfile['workAuth']): number {
-  if (workAuth === 'citizen' || workAuth === 'permanent_resident') return 100
-  if (visa.value === true) return 100
-  if (visa.value === 'unknown') return 60
-  if (visa.value === false) {
-    return workAuth === 'needs_sponsorship' ? 0 : 70
-  }
-  return 60
-}
 
 function salaryScore(salary: ExtractionResult['salary'], minEur?: number): number {
   if (!salary || !minEur) return 50
@@ -94,8 +85,8 @@ export function computeMatch(
   const hardFilters = runHardFilters(job, extraction, profile)
   const hasBlocker = hardFilters.some(f => f.severity === 'blocker')
 
-  // Skill scoring — combine résumé-detected skills with manually entered ones
-  const candidateSkills = [...(resume?.skills ?? []), ...(profile.skills ?? [])]
+  // profile.skills is the source of truth (pre-populated from resume on upload, user-editable)
+  const candidateSkills = profile.skills?.length ? profile.skills : (resume?.skills ?? [])
   const { score: skillsSc, matched, missing, bonus } = skillScore(
     extraction.requiredSkills, extraction.niceToHaveSkills, candidateSkills,
   )
@@ -107,7 +98,6 @@ export function computeMatch(
   const { score: languageSc, gaps: languageGaps } = languageScore(extraction.requiredLanguages, userLanguages)
   const locationSc = locationScore(extraction, prefs)
   const empTypeSc = employmentTypeScore(extraction.employmentType, prefs.jobTypes)
-  const visaSc = visaScore(extraction.visa, profile.workAuth)
   const salarySc = salaryScore(extraction.salary, prefs.minSalaryEur)
 
   const base = Math.round(
@@ -115,7 +105,6 @@ export function computeMatch(
     experienceSc * SCORE_WEIGHTS.experience +
     languageSc * SCORE_WEIGHTS.language +
     locationSc * SCORE_WEIGHTS.location +
-    visaSc * SCORE_WEIGHTS.visaCompatibility +
     salarySc * SCORE_WEIGHTS.salaryMatch +
     empTypeSc * SCORE_WEIGHTS.employmentType,
   )
@@ -133,7 +122,6 @@ export function computeMatch(
     language: languageSc,
     location: locationSc,
     employmentType: empTypeSc,
-    visaCompatibility: visaSc,
     salaryMatch: salarySc,
   }
 

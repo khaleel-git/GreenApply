@@ -1,8 +1,7 @@
 import type { UserRule } from '../../types'
-import type { WorkAuthStatus } from '../../types/profile'
 
-export function generateDefaultRules(workAuth: WorkAuthStatus): UserRule[] {
-  const rules: UserRule[] = [
+export function generateDefaultRules(): UserRule[] {
+  return [
     {
       id: 'default-skip-stale',
       label: 'Highlight jobs older than 60 days',
@@ -18,16 +17,4 @@ export function generateDefaultRules(workAuth: WorkAuthStatus): UserRule[] {
       action: { type: 'auto_save' },
     },
   ]
-
-  if (workAuth === 'needs_sponsorship' || workAuth === 'student_visa') {
-    rules.push({
-      id: 'default-skip-no-sponsor',
-      label: 'Auto-skip jobs with no visa sponsorship',
-      enabled: true,
-      condition: { type: 'hard_filter_triggered', filterType: 'visa_blocked' },
-      action: { type: 'auto_skip' },
-    })
-  }
-
-  return rules
 }

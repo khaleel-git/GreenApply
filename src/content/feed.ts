@@ -227,7 +227,7 @@ async function scanCards(): Promise<void> {
       continue
     }
 
-    // Request match from background
+    // Request match from background (catch context invalidated on extension reload)
     chrome.runtime.sendMessage({ type: 'GET_MATCH', jobId: rawId }).then(
       async (match: unknown) => {
         if (match && typeof match === 'object' && 'score' in match) {
@@ -236,7 +236,7 @@ async function scanCards(): Promise<void> {
           await annotateCard(card, m)
         }
       },
-    ).catch(() => {})
+    ).catch(() => {})  // swallow extension context invalidated + network errors
   }
 }
 
