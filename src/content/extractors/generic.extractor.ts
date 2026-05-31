@@ -52,7 +52,14 @@ export const genericExtractor: IPlatformExtractor = {
       || getTextFromSelectors(doc, ['[itemprop="hiringOrganization"]', '[class*="company-name"]', '[class*="employer"]'])
     const location = ld.location
       || getTextFromSelectors(doc, ['[itemprop="jobLocation"]', '[class*="location"]', '[class*="city"]'])
-    const description = ld.description || getLargestTextBlock(doc)
+    // Prefer whichever source is longer: many ATS systems (e.g. Taleo/Oracle) put
+    // only a partial description in JSON-LD and leave the requirements section
+    // (language, skills) only in the rendered DOM.
+    const ldDescription = ld.description ?? ''
+    const domDescription = getLargestTextBlock(doc)
+    const description = domDescription.length > ldDescription.length
+      ? domDescription
+      : ldDescription || domDescription
 
     if (!title || !description) return null
 

@@ -101,6 +101,34 @@ export function Overlay() {
   )
 }
 
+type LanguageGap = { language: string; required: string; actual: string | null; met: boolean }
+
+function LanguageRequirements({ gaps }: { gaps: LanguageGap[] }) {
+  return (
+    <div style={{ fontSize: 12 }}>
+      <div style={{ fontWeight: 600, color: '#374151', marginBottom: 6 }}>Language Requirements</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {gaps.map(g => (
+          <div key={g.language} style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            padding: '4px 8px', borderRadius: 6,
+            background: g.met ? '#f0fdf4' : '#fef2f2',
+            border: `1px solid ${g.met ? '#bbf7d0' : '#fecaca'}`,
+          }}>
+            <span style={{ color: '#374151' }}>
+              {g.language === 'German' ? '🇩🇪' : g.language === 'English' ? '🇬🇧' : g.language === 'French' ? '🇫🇷' : '🌐'}
+              {' '}{g.language} {g.required}
+            </span>
+            <span style={{ fontWeight: 600, color: g.met ? '#16a34a' : '#dc2626', fontSize: 11 }}>
+              {g.actual ? `${g.actual} ${g.met ? '✓' : '✗'}` : 'not set'}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function LoadingState() {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0' }}>
@@ -149,6 +177,11 @@ function ResultState({
       {/* Hard filter blockers */}
       {blockers.length > 0 && <HardFilterAlert filters={blockers} />}
 
+      {/* Language requirements — always shown when detected, met or not */}
+      {match.skillGap.languageGaps.length > 0 && (
+        <LanguageRequirements gaps={match.skillGap.languageGaps} />
+      )}
+
       {/* Confidence caveats */}
       {extraction && (
         <ConfidenceCaveat visa={extraction.visa} confidence={extraction.confidence} />
@@ -163,8 +196,10 @@ function ResultState({
         />
       )}
 
-      {/* Warnings */}
-      {warnings.length > 0 && <HardFilterAlert filters={warnings} />}
+      {/* Warnings (non-language) */}
+      {warnings.filter(f => f.type !== 'language_gap').length > 0 && (
+        <HardFilterAlert filters={warnings.filter(f => f.type !== 'language_gap')} />
+      )}
 
       {/* LLM summary if available */}
       {match.summary && (

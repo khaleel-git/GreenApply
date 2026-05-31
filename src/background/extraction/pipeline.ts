@@ -45,7 +45,7 @@ export async function runExtractionPipeline(raw: RawJobData): Promise<Extraction
   // systems (Taleo, Oracle) hardcode FULL_TIME in JSON-LD regardless of actual type.
   const empText = [raw.title, description].filter(Boolean).join('\n')
   const visaResult = extractVisa(description)
-  const { reqs: langReqs, confidence: langConf } = extractLanguages(description)
+  const { reqs: langReqs, confidence: langConf } = extractLanguages([raw.title, description].filter(Boolean).join('\n'))
   const { type: empType, confidence: empConf } = extractEmploymentType(empText)
   const { years: expYears, confidence: expConf } = extractExperienceYears(description)
   const { value: remoteValue } = extractRemote(description)
