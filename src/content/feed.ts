@@ -227,7 +227,8 @@ async function scanCards(): Promise<void> {
       continue
     }
 
-    // Request match from background (catch context invalidated on extension reload)
+    // Request match from background — guard against missing runtime (iframe / reload)
+    if (typeof chrome === 'undefined' || !chrome.runtime) continue
     chrome.runtime.sendMessage({ type: 'GET_MATCH', jobId: rawId }).then(
       async (match: unknown) => {
         if (match && typeof match === 'object' && 'score' in match) {

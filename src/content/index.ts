@@ -40,6 +40,13 @@ const extractors: Record<string, typeof genericExtractor> = {
   generic: genericExtractor,
 }
 
+// Guard: content scripts can be injected into cross-origin iframes where
+// chrome.runtime is undefined. Bail out immediately in that case.
+if (typeof chrome === 'undefined' || !chrome.runtime) {
+  // Not an extension context (e.g. sandboxed iframe) — do nothing.
+  throw new Error('GreenApply: no extension context, skipping')
+}
+
 let overlayMounted = false
 
 function handleNavigation(): void {
@@ -67,7 +74,9 @@ function handleNavigation(): void {
     overlayMounted = true
   }
 
-  chrome.runtime.sendMessage({ type: 'JOB_DETECTED', payload: raw }).catch(() => {})
+  if (chrome.runtime) {
+    chrome.runtime.sendMessage({ type: 'JOB_DETECTED', payload: raw }).catch(() => {})
+  }
 }
 
 // Receive match results pushed from service worker.
