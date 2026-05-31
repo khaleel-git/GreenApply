@@ -35,6 +35,27 @@ export interface ResumeProfile {
   certifications: string[]
 }
 
+export type DegreeLevel =
+  | 'bachelor_student'    // currently enrolled in bachelor's
+  | 'bachelor_graduate'   // completed bachelor's
+  | 'master_student'      // currently enrolled in master's
+  | 'master_graduate'     // completed master's
+  | 'phd_student'         // currently in PhD programme
+  | 'phd_graduate'        // completed PhD
+  | 'other'
+
+export interface AcademicProfile {
+  degreeLevel: DegreeLevel
+  fieldOfStudy: string          // e.g. "Computer Science", "Electrical Engineering"
+  university: string
+  courses: string[]             // extracted from transcript + manually added
+  certifications: string[]      // e.g. "Machine Learning Specialization (Coursera, 2024)"
+  gpa?: number
+  graduationYear?: number
+  uploadedFileNames: string[]   // names of uploaded docs for display
+  uploadedAt: number
+}
+
 export type WorkAuthStatus =
   | 'citizen'
   | 'permanent_resident'
@@ -61,6 +82,7 @@ export interface UserProfile {
   targetLocations: string[]
   workAuth: WorkAuthStatus
   resume?: ResumeProfile
+  academic?: AcademicProfile
   preferences: UserPreferences
   languages: LanguageEntry[]
   skills?: string[]        // manually entered skills — merged with resume-detected skills for scoring

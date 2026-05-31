@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
-import type { UserProfile, LanguageEntry } from '../types'
+import type { UserProfile, LanguageEntry, AcademicProfile, DegreeLevel } from '../types'
 import { parsePdf } from '../background/parsers/pdf.parser'
 import { parseDocx } from '../background/parsers/docx.parser'
 import { parseResumeDeterministic } from '../background/parsers/resume.parser'
+import { parseTranscript } from '../background/parsers/transcript.parser'
 
-type Section = 'resume' | 'profile' | 'languages' | 'preferences' | 'api'
+type Section = 'resume' | 'academic' | 'profile' | 'languages' | 'preferences' | 'api'
 
 // Default so every section is usable before a résumé is uploaded — saving creates
 // the profile on the backend.
@@ -38,6 +39,7 @@ export function Options() {
 
   const nav: { id: Section; label: string }[] = [
     { id: 'resume', label: '📄 Resume' },
+    { id: 'academic', label: '🎓 Academic' },
     { id: 'profile', label: '👤 Profile' },
     { id: 'languages', label: '🗣️ Languages & Skills' },
     { id: 'preferences', label: '⚙️ Preferences' },
@@ -78,6 +80,9 @@ export function Options() {
         )}
 
         {section === 'resume' && <ResumeSection />}
+        {section === 'academic' && (
+          <AcademicSection profile={profile} onSave={saveProfile} />
+        )}
         {section === 'profile' && (
           <ProfileSection profile={profile} onSave={saveProfile} />
         )}
@@ -406,6 +411,218 @@ function ApiSection() {
     </div>
   )
 }
+
+// ─── Academic section ─────────────────────────────────────────────────────────
+
+const DEGREE_LABELS: Record<DegreeLevel, string> = {
+  bachelor_student:  'Bachelor Student (currently enrolled)',
+  bachelor_graduate: 'Bachelor Graduate',
+  master_student:    'Master Student (currently enrolled)',
+  master_graduate:   'Master Graduate',
+  phd_student:       'PhD Student (currently enrolled)',
+  phd_graduate:      'PhD Graduate',
+  other:             'Other',
+}
+
+function AcademicSection({ profile, onSave }: { profile: UserProfile; onSave: (u: Partial<UserProfile>) => Promise<void> }) {
+  const existing = profile.academic
+  const [degreeLevel, setDegreeLevel] = useState<DegreeLevel>(existing?.degreeLevel ?? 'bachelor_student')
+  const [fieldOfStudy, setFieldOfStudy] = useState(existing?.fieldOfStudy ?? '')
+  const [university, setUniversity] = useState(existing?.university ?? '')
+  const [courses, setCourses] = useState<string[]>(existing?.courses ?? [])
+  const [certifications, setCertifications] = useState<string[]>(existing?.certifications ?? [])
+  const [newCert, setNewCert] = useState('')
+  const [uploadedFileNames, setUploadedFileNames] = useState<string[]>(existing?.uploadedFileNames ?? [])
+  const [uploadStatus, setUploadStatus] = useState<'idle' | 'parsing' | 'done' | 'error'>('idle')
+  const [uploadError, setUploadError] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  async function handleDocUpload(file: File) {
+    const ext = file.name.split('.').pop()?.toLowerCase()
+    if (ext !== 'pdf' && ext !== 'docx') {
+      setUploadError('Only PDF and DOCX supported')
+      setUploadStatus('error')
+      return
+    }
+    setUploadStatus('parsing')
+    setUploadError('')
+    try {
+      const buffer = await file.arrayBuffer()
+      const raw = ext === 'pdf' ? await parsePdf(buffer) : await parseDocx(buffer)
+      const result = parseTranscript(raw)
+
+      // Merge extracted courses with existing (deduplicate)
+      const merged = [...new Set([...courses, ...result.courses])]
+      setCourses(merged)
+      if (result.university && !university) setUniversity(result.university)
+      if (result.fieldOfStudy && !fieldOfStudy) setFieldOfStudy(result.fieldOfStudy)
+      if (result.degreeHint && degreeLevel === 'bachelor_student') setDegreeLevel(result.degreeHint)
+      setUploadedFileNames(prev => [...new Set([...prev, file.name])])
+      setUploadStatus('done')
+    } catch (e) {
+      setUploadError(String(e))
+      setUploadStatus('error')
+    }
+  }
+
+  async function save() {
+    const academic: AcademicProfile = {
+      degreeLevel, fieldOfStudy, university,
+      courses, certifications, uploadedFileNames,
+      uploadedAt: Date.now(),
+    }
+    await onSave({ academic })
+  }
+
+  function removeCourse(c: string) { setCourses(prev => prev.filter(x => x !== c)) }
+  function addCert() {
+    const t = newCert.trim()
+    if (t) { setCertifications(prev => [...prev, t]); setNewCert('') }
+  }
+  function removeCert(c: string) { setCertifications(prev => prev.filter(x => x !== c)) }
+
+  return (
+    <div style={{ maxWidth: 600 }}>
+      <h2 style={{ fontSize: 18, fontWeight: 700, color: '#111827', marginBottom: 4 }}>Academic Profile</h2>
+      <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 24 }}>
+        Upload your transcript, enrollment letter, or certificates. GreenApply extracts your courses and uses them to match you with relevant student positions.
+      </p>
+
+      {/* Degree level */}
+      <Field label="Degree Level">
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {(Object.keys(DEGREE_LABELS) as DegreeLevel[]).map(d => (
+            <button key={d} onClick={() => setDegreeLevel(d)} style={{
+              padding: '6px 14px', borderRadius: 20, fontSize: 12, cursor: 'pointer',
+              border: `2px solid ${degreeLevel === d ? '#16a34a' : '#d1d5db'}`,
+              background: degreeLevel === d ? '#f0fdf4' : '#fff',
+              color: degreeLevel === d ? '#16a34a' : '#374151',
+              fontWeight: degreeLevel === d ? 700 : 400,
+            }}>
+              {DEGREE_LABELS[d]}
+            </button>
+          ))}
+        </div>
+      </Field>
+
+      {/* Field + university */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+        <Field label="Field of Study">
+          <input style={inputStyle} placeholder="e.g. Computer Science" value={fieldOfStudy}
+            onChange={e => setFieldOfStudy(e.target.value)} />
+        </Field>
+        <Field label="University">
+          <input style={inputStyle} placeholder="e.g. TU Berlin" value={university}
+            onChange={e => setUniversity(e.target.value)} />
+        </Field>
+      </div>
+
+      {/* Document upload */}
+      <Field label="Upload Academic Documents">
+        <div
+          onClick={() => inputRef.current?.click()}
+          onDragOver={e => e.preventDefault()}
+          onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleDocUpload(f) }}
+          style={{
+            border: '2px dashed #d1d5db', borderRadius: 10, padding: '20px 16px',
+            textAlign: 'center', cursor: 'pointer', background: '#f9fafb',
+          }}
+        >
+          <div style={{ fontSize: 22, marginBottom: 6 }}>📄</div>
+          <div style={{ fontSize: 13, color: '#374151', fontWeight: 500 }}>
+            Drop PDF or DOCX here, or click to browse
+          </div>
+          <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>
+            Transcript · Enrollment letter · Certificates · Course lists
+          </div>
+          <input ref={inputRef} type="file" accept=".pdf,.docx" style={{ display: 'none' }}
+            onChange={e => { const f = e.target.files?.[0]; if (f) handleDocUpload(f) }} />
+        </div>
+        {uploadStatus === 'parsing' && (
+          <div style={{ marginTop: 8, fontSize: 12, color: '#6b7280' }}>⏳ Parsing document…</div>
+        )}
+        {uploadStatus === 'done' && (
+          <div style={{ marginTop: 8, fontSize: 12, color: '#16a34a' }}>✓ Courses extracted successfully</div>
+        )}
+        {uploadStatus === 'error' && (
+          <div style={{ marginTop: 8, fontSize: 12, color: '#dc2626' }}>Error: {uploadError}</div>
+        )}
+        {uploadedFileNames.length > 0 && (
+          <div style={{ marginTop: 6, fontSize: 11, color: '#9ca3af' }}>
+            Uploaded: {uploadedFileNames.join(', ')}
+          </div>
+        )}
+      </Field>
+
+      {/* Extracted courses */}
+      <Field label={`Courses (${courses.length})`}>
+        <p style={{ fontSize: 11, color: '#6b7280', marginTop: 0, marginBottom: 8 }}>
+          Auto-extracted from your documents. Used to match you with relevant positions.
+        </p>
+        {courses.length === 0 && (
+          <div style={{ fontSize: 12, color: '#9ca3af', padding: '8px 0' }}>
+            No courses yet — upload a transcript to auto-extract, or add manually below.
+          </div>
+        )}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+          {courses.map(c => (
+            <span key={c} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              padding: '3px 10px', background: '#eff6ff', color: '#1d4ed8',
+              borderRadius: 999, fontSize: 11, border: '1px solid #bfdbfe',
+            }}>
+              {c}
+              <button onClick={() => removeCourse(c)} style={{
+                border: 'none', background: 'none', cursor: 'pointer',
+                color: '#93c5fd', fontSize: 13, padding: 0, lineHeight: 1,
+              }}>×</button>
+            </span>
+          ))}
+        </div>
+        {/* Manual course add */}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input style={{ ...inputStyle, flex: 1 }} placeholder="Add a course manually…"
+            onKeyDown={e => {
+              if (e.key === 'Enter') {
+                const val = (e.target as HTMLInputElement).value.trim()
+                if (val && !courses.includes(val)) { setCourses(prev => [...prev, val]) }
+                ;(e.target as HTMLInputElement).value = ''
+              }
+            }} />
+        </div>
+        <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>Press Enter to add</div>
+      </Field>
+
+      {/* Certifications */}
+      <Field label="Online Certifications">
+        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+          <input style={{ ...inputStyle, flex: 1 }} placeholder="e.g. Machine Learning Specialization (Coursera, 2024)"
+            value={newCert} onChange={e => setNewCert(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && addCert()} />
+          <button onClick={addCert} style={{ ...primaryBtn, marginTop: 0, padding: '8px 16px', fontSize: 13 }}>
+            Add
+          </button>
+        </div>
+        {certifications.map(c => (
+          <div key={c} style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            padding: '6px 10px', background: '#f0fdf4', borderRadius: 6,
+            border: '1px solid #bbf7d0', marginBottom: 4, fontSize: 12,
+          }}>
+            <span>🏅 {c}</span>
+            <button onClick={() => removeCert(c)} style={{
+              border: 'none', background: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: 14,
+            }}>×</button>
+          </div>
+        ))}
+      </Field>
+
+      <button onClick={save} style={primaryBtn}>Save Academic Profile</button>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (

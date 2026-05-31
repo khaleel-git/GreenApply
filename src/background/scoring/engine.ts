@@ -1,9 +1,42 @@
-import type { ExtractionResult, JobListing, ResumeProfile, UserPreferences, ScoreBreakdown, MatchResult, UserProfile } from '../../types'
+import type { ExtractionResult, JobListing, ResumeProfile, UserPreferences, ScoreBreakdown, MatchResult, UserProfile, AcademicProfile } from '../../types'
 import { SCORE_WEIGHTS, SCORE_THRESHOLDS } from '../../constants/scoring'
 import { computeFreshnessModifier } from './freshness'
 import { runHardFilters } from './hard-filters'
 
 const CEFR_INDEX: Record<string, number> = { A1: 1, A2: 2, B1: 3, B2: 4, C1: 5, C2: 6, Native: 7 }
+
+// Academic relevance modifier: +/-10 based on how well the job matches the
+// student's field of study and courses. Applied on top of the base score.
+function academicRelevanceModifier(description: string, academic?: AcademicProfile): number {
+  if (!academic) return 0
+
+  const desc = description.toLowerCase()
+  let hits = 0
+
+  // Field of study keywords
+  for (const word of academic.fieldOfStudy.toLowerCase().split(/\s+/)) {
+    if (word.length > 4 && desc.includes(word)) hits++
+  }
+
+  // Courses — extract meaningful keywords and check against description
+  for (const course of academic.courses.slice(0, 30)) {
+    for (const word of course.toLowerCase().split(/\s+/)) {
+      if (word.length > 5 && desc.includes(word)) { hits++; break }
+    }
+  }
+
+  // Certifications
+  for (const cert of academic.certifications) {
+    for (const word of cert.toLowerCase().split(/[\s()]+/)) {
+      if (word.length > 5 && desc.includes(word)) { hits++; break }
+    }
+  }
+
+  if (hits >= 5) return 10
+  if (hits >= 3) return 6
+  if (hits >= 1) return 3
+  return 0
+}
 
 function skillScore(required: string[], niceToHave: string[], candidateSkills: string[]): { score: number; matched: string[]; missing: string[]; bonus: string[] } {
   const lower = candidateSkills.map(s => s.toLowerCase())
@@ -97,8 +130,20 @@ export function computeMatch(
   const experienceSc = resume ? experienceScore(extraction, resume) : 50
   const { score: languageSc, gaps: languageGaps } = languageScore(extraction.requiredLanguages, userLanguages)
   const locationSc = locationScore(extraction, prefs)
-  const empTypeSc = employmentTypeScore(extraction.employmentType, prefs.jobTypes)
+
+  // Merge user's stated job-type preferences with degree-level-implied types.
+  // A current student automatically fits werkstudent/internship/thesis even if
+  // they haven't explicitly set those in preferences.
+  const degreeLevel = profile.academic?.degreeLevel
+  const impliedTypes: UserPreferences['jobTypes'] = []
+  if (degreeLevel === 'bachelor_student' || degreeLevel === 'master_student' || degreeLevel === 'phd_student') {
+    impliedTypes.push('werkstudent', 'internship', 'thesis')
+  }
+  const effectiveJobTypes = [...new Set([...prefs.jobTypes, ...impliedTypes])] as UserPreferences['jobTypes']
+
+  const empTypeSc = employmentTypeScore(extraction.employmentType, effectiveJobTypes)
   const salarySc = salaryScore(extraction.salary, prefs.minSalaryEur)
+  const academicModifier = academicRelevanceModifier(job.description, profile.academic)
 
   const base = Math.round(
     skillsSc * SCORE_WEIGHTS.skills +
@@ -110,8 +155,9 @@ export function computeMatch(
   )
 
   const freshnessModifier = computeFreshnessModifier(extraction.postedDate)
-  const total = hasBlocker ? Math.min(34, Math.max(0, base + freshnessModifier))
-    : Math.min(100, Math.max(0, base + freshnessModifier))
+  const total = hasBlocker
+    ? Math.min(34, Math.max(0, base + freshnessModifier + academicModifier))
+    : Math.min(100, Math.max(0, base + freshnessModifier + academicModifier))
 
   const breakdown: ScoreBreakdown = {
     total,
