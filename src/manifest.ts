@@ -17,6 +17,7 @@ export default defineManifest({
     'https://*.myworkdayjobs.com/*',
     'https://jobs.ashbyhq.com/*',
     'https://*.personio.de/*',
+    'https://integrate.api.nvidia.com/*',
   ],
   optional_host_permissions: ['*://*/*'],
   background: {

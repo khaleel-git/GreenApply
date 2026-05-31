@@ -8,19 +8,59 @@ const BADGE_ATTR = 'data-ga-badge'
 interface QuickTag { label: string; color: string; bg: string }
 
 const QUICK_PATTERNS: Array<{ pattern: RegExp; tag: QuickTag }> = [
-  // Language requirements
-  { pattern: /Deutsch(kenntnisse)?\s*(C2|C1|verhandlungssicher|fließend|Muttersprachler|native)/i,   tag: { label: '🇩🇪 German C1+', color: '#dc2626', bg: '#fee2e2' } },
-  { pattern: /Deutsch(kenntnisse)?\s*(B2|B1|Grundkenntnisse)/i,                                       tag: { label: '🇩🇪 German B2', color: '#d97706', bg: '#fef3c7' } },
-  { pattern: /German\s*(C2|C1|fluent|native|required|mandatory|verhandlungssicher)/i,                 tag: { label: '🇩🇪 German C1+', color: '#dc2626', bg: '#fee2e2' } },
-  { pattern: /German\s*(B2|B1|basic|Grundkenntnisse)/i,                                               tag: { label: '🇩🇪 German B2', color: '#d97706', bg: '#fef3c7' } },
-  { pattern: /Englisch\s*(C2|C1|B2|fließend|verhandlungssicher)|English\s*(required|mandatory|C1|C2|fluent)/i, tag: { label: '🇬🇧 English', color: '#2563eb', bg: '#eff6ff' } },
-  // Job type
-  { pattern: /Werkstudent|Working[\s-]Student|Studentische[\s]Hilfskraft|HiWi\b/i,                   tag: { label: 'Werkstudent', color: '#7c3aed', bg: '#f5f3ff' } },
-  { pattern: /Praktikum|Internship|Pflichtpraktikum|Praktikant/i,                                     tag: { label: 'Internship', color: '#0891b2', bg: '#e0f2fe' } },
-  { pattern: /Thesis|Abschlussarbeit|Bachelor[\s-]?arbeit|Master[\s-]?arbeit/i,                       tag: { label: 'Thesis', color: '#0891b2', bg: '#e0f2fe' } },
-  // Visa signal
-  { pattern: /no\s*(visa\s*)?sponsorship|we\s*(do not|don.t)\s*sponsor|EU\s*citizen\s*required/i,    tag: { label: '🚫 No sponsorship', color: '#dc2626', bg: '#fee2e2' } },
-  { pattern: /visa\s*sponsorship\s*(is\s*)?(available|provided)|we\s*(offer|support)\s*visa/i,        tag: { label: '✅ Visa sponsor', color: '#16a34a', bg: '#f0fdf4' } },
+  // ── German language ──────────────────────────────────────────────────────────
+  // C2 / native / C1 / verhandlungssicher / fließend
+  {
+    pattern: /Deutsch(kenntnisse)?\s*(C2|C1|verhandlungssicher|fließend|Muttersprachler|muttersprachlich|native\s*German|German\s*native)/i,
+    tag: { label: '🇩🇪 German C1+', color: '#dc2626', bg: '#fee2e2' },
+  },
+  {
+    pattern: /German\s*(C2|C1|fluent|native|verhandlungssicher|fließend|proficient|required|mandatory|necessary|obligatory)/i,
+    tag: { label: '🇩🇪 German C1+', color: '#dc2626', bg: '#fee2e2' },
+  },
+  // Deutschkenntnisse erforderlich (level not stated — assume C1 requirement)
+  {
+    pattern: /Deutschkenntnisse\s*(sind\s*)?(erforderlich|notwendig|werden\s*vorausgesetzt|Voraussetzung|required|necessary)/i,
+    tag: { label: '🇩🇪 German req.', color: '#dc2626', bg: '#fee2e2' },
+  },
+  {
+    pattern: /Deutsch\s*(ist|als\s*Arbeitssprache|Arbeitssprache\s*ist|language\s*of\s*work\s*is\s*German)/i,
+    tag: { label: '🇩🇪 German req.', color: '#dc2626', bg: '#fee2e2' },
+  },
+  // B2
+  {
+    pattern: /Deutsch(kenntnisse)?\s*(B2|sehr\s*gut[e]?|fortgeschritten)/i,
+    tag: { label: '🇩🇪 German B2', color: '#d97706', bg: '#fef3c7' },
+  },
+  {
+    pattern: /German\s*(B2|good|advanced|solid|strong\s*German)/i,
+    tag: { label: '🇩🇪 German B2', color: '#d97706', bg: '#fef3c7' },
+  },
+  // B1 or lower
+  {
+    pattern: /Deutsch(kenntnisse)?\s*(B1|A2|A1|Grundkenntnisse|Grundlagen|basic|beginner)/i,
+    tag: { label: '🇩🇪 German B1', color: '#ca8a04', bg: '#fef9c3' },
+  },
+
+  // ── English language ─────────────────────────────────────────────────────────
+  {
+    pattern: /Englisch\s*(C2|C1|B2|fließend|verhandlungssicher|sehr\s*gut)|English\s*(C2|C1|fluent|native|proficient|business\s*level|required|mandatory)/i,
+    tag: { label: '🇬🇧 English req.', color: '#2563eb', bg: '#eff6ff' },
+  },
+
+  // ── Job type ─────────────────────────────────────────────────────────────────
+  {
+    pattern: /Werkstudent|Working[\s-]Student|Studentische[\s]Hilfskraft|Student\s*Assistant|HiWi\b/i,
+    tag: { label: 'Werkstudent', color: '#7c3aed', bg: '#f5f3ff' },
+  },
+  {
+    pattern: /Praktikum|Internship|Pflichtpraktikum|Praktikant(in)?/i,
+    tag: { label: 'Internship', color: '#0891b2', bg: '#e0f2fe' },
+  },
+  {
+    pattern: /Thesis|Abschlussarbeit|Bachelor[\s-]?arbeit|Master[\s-]?arbeit|Diplomarbeit/i,
+    tag: { label: 'Thesis', color: '#0891b2', bg: '#e0f2fe' },
+  },
 ]
 
 function quickTagsFromText(text: string): QuickTag[] {
