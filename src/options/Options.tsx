@@ -1,24 +1,37 @@
 import { useState, useEffect, useRef } from 'react'
-import type { UserProfile } from '../types'
+import type { UserProfile, LanguageEntry } from '../types'
 import { parsePdf } from '../background/parsers/pdf.parser'
 import { parseDocx } from '../background/parsers/docx.parser'
 import { parseResumeDeterministic } from '../background/parsers/resume.parser'
 
-type Section = 'resume' | 'profile' | 'preferences' | 'api'
+type Section = 'resume' | 'profile' | 'languages' | 'preferences' | 'api'
+
+// Default so every section is usable before a résumé is uploaded — saving creates
+// the profile on the backend.
+const EMPTY_PROFILE: UserProfile = {
+  id: 'main', name: '', email: '', location: '', targetLocations: [],
+  workAuth: 'needs_sponsorship',
+  preferences: {
+    jobTypes: ['full-time'], remotePreference: 'any', minSalaryEur: undefined,
+    excludedCompanies: [], targetRoles: [], targetIndustries: [], uiLanguage: 'en',
+  },
+  languages: [], skills: [], createdAt: 0, updatedAt: 0,
+}
 
 export function Options() {
   const [section, setSection] = useState<Section>('resume')
-  const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [profile, setProfile] = useState<UserProfile>(EMPTY_PROFILE)
   const [saved, setSaved] = useState(false)
 
   useEffect(() => {
     chrome.runtime.sendMessage({ type: 'GET_PROFILE' }).then(p => {
-      if (p) setProfile(p as UserProfile)
+      if (p) setProfile({ ...EMPTY_PROFILE, ...(p as UserProfile) })
     })
   }, [])
 
   async function saveProfile(updates: Partial<UserProfile>) {
     await chrome.runtime.sendMessage({ type: 'SAVE_PROFILE', profile: updates })
+    setProfile(prev => ({ ...prev, ...updates }))
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
@@ -26,6 +39,7 @@ export function Options() {
   const nav: { id: Section; label: string }[] = [
     { id: 'resume', label: '📄 Resume' },
     { id: 'profile', label: '👤 Profile' },
+    { id: 'languages', label: '🗣️ Languages & Skills' },
     { id: 'preferences', label: '⚙️ Preferences' },
     { id: 'api', label: '🔑 AI Features' },
   ]
@@ -64,18 +78,16 @@ export function Options() {
         )}
 
         {section === 'resume' && <ResumeSection />}
-        {section === 'profile' && profile && (
+        {section === 'profile' && (
           <ProfileSection profile={profile} onSave={saveProfile} />
         )}
-        {section === 'preferences' && profile && (
+        {section === 'languages' && (
+          <LanguagesSkillsSection profile={profile} onSave={saveProfile} />
+        )}
+        {section === 'preferences' && (
           <PreferencesSection profile={profile} onSave={saveProfile} />
         )}
         {section === 'api' && <ApiSection />}
-        {!profile && section !== 'resume' && section !== 'api' && (
-          <div style={{ color: '#9ca3af', fontSize: 14 }}>
-            Upload your resume first to set up your profile.
-          </div>
-        )}
       </div>
     </div>
   )
@@ -185,6 +197,102 @@ function ProfileSection({ profile, onSave }: { profile: UserProfile; onSave: (p:
       <button onClick={() => onSave({ name, location, workAuth })} style={primaryBtn}>
         Save Profile
       </button>
+    </div>
+  )
+}
+
+const COMMON_LANGUAGES = ['German', 'English', 'French', 'Spanish', 'Italian', 'Dutch', 'Portuguese', 'Mandarin', 'Arabic', 'Hindi', 'Russian', 'Turkish']
+const CEFR_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'Native']
+
+function LanguagesSkillsSection({ profile, onSave }: { profile: UserProfile; onSave: (p: Partial<UserProfile>) => void }) {
+  const [languages, setLanguages] = useState<LanguageEntry[]>(
+    profile.languages.length ? profile.languages : [{ language: 'German', level: 'B1' }],
+  )
+  const [skills, setSkills] = useState((profile.skills ?? []).join(', '))
+
+  const resumeSkills = profile.resume?.skills ?? []
+
+  function updateLang(i: number, patch: Partial<LanguageEntry>) {
+    setLanguages(prev => prev.map((l, idx) => (idx === i ? { ...l, ...patch } : l)))
+  }
+
+  function save() {
+    const cleanLangs = languages.filter(l => l.language.trim())
+    const cleanSkills = skills.split(/[,\n]/).map(s => s.trim()).filter(Boolean)
+    onSave({ languages: cleanLangs, skills: cleanSkills })
+  }
+
+  return (
+    <div>
+      <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4, color: '#111827' }}>Languages &amp; Skills</h2>
+      <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 20 }}>
+        Your language levels drive the language-gap check (e.g. a job requiring German B2 when
+        you're at A2). Your skills drive the skill-match score. These work even without a résumé.
+      </p>
+
+      <Field label="Languages">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {languages.map((lang, i) => (
+            <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <input
+                list="ga-language-list"
+                value={lang.language}
+                onChange={e => updateLang(i, { language: e.target.value })}
+                placeholder="Language"
+                style={{ ...inputStyle, flex: 1 }}
+              />
+              <select
+                value={lang.level}
+                onChange={e => updateLang(i, { level: e.target.value })}
+                style={{ ...inputStyle, width: 110 }}
+              >
+                {CEFR_LEVELS.map(lvl => <option key={lvl} value={lvl}>{lvl}</option>)}
+              </select>
+              <button
+                onClick={() => setLanguages(prev => prev.filter((_, idx) => idx !== i))}
+                aria-label="Remove language"
+                style={{
+                  border: '1px solid #e5e7eb', background: '#fff', borderRadius: 8,
+                  width: 34, height: 34, cursor: 'pointer', color: '#dc2626', fontSize: 16, flexShrink: 0,
+                }}
+              >
+                ×
+              </button>
+            </div>
+          ))}
+          <datalist id="ga-language-list">
+            {COMMON_LANGUAGES.map(l => <option key={l} value={l} />)}
+          </datalist>
+          <button
+            onClick={() => setLanguages(prev => [...prev, { language: '', level: 'B2' }])}
+            style={{
+              alignSelf: 'flex-start', marginTop: 2, padding: '6px 12px', borderRadius: 8,
+              border: '1px dashed #16a34a', background: '#f0fdf4', color: '#16a34a',
+              fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            }}
+          >
+            + Add language
+          </button>
+        </div>
+      </Field>
+
+      <Field label="Skills (comma-separated)">
+        <textarea
+          value={skills}
+          onChange={e => setSkills(e.target.value)}
+          placeholder="Python, Machine Learning, Deep Learning, Bash, Forensics"
+          rows={4}
+          style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }}
+        />
+        {resumeSkills.length > 0 && (
+          <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 6 }}>
+            Auto-detected from your résumé (also counted): {resumeSkills.slice(0, 20).join(', ')}
+            {resumeSkills.length > 20 ? '…' : ''}
+          </p>
+        )}
+      </Field>
+
+      <button onClick={save} style={primaryBtn}>Save Languages &amp; Skills</button>
     </div>
   )
 }

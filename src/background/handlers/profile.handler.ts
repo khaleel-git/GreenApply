@@ -2,6 +2,7 @@ import type { UserProfile } from '../../types'
 import { getProfile, saveProfile } from '../db/profile.store'
 import { generateDefaultRules } from '../rules/defaults'
 import { saveRule } from '../db/rules.store'
+import { clearMatches } from '../db/matches.store'
 
 export async function handleGetProfile(): Promise<UserProfile | undefined> {
   return getProfile()
@@ -31,6 +32,10 @@ export async function handleSaveProfile(partial: Partial<UserProfile>): Promise<
   }
   const profile: UserProfile = { ...base, ...existing, ...partial, updatedAt: now }
   await saveProfile(profile)
+
+  // Profile changed → previously cached match scores are stale. Clear them so the
+  // next job visit re-scores against the updated languages / skills / preferences.
+  await clearMatches()
 
   if (!existing && partial.resume) {
     const rules = generateDefaultRules(profile.workAuth)
