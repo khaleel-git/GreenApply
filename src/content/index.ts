@@ -7,6 +7,7 @@ import { leverDetector } from './detectors/lever.detector'
 import { workdayDetector } from './detectors/workday.detector'
 import { personioDetector } from './detectors/personio.detector'
 import { stepstoneDetector } from './detectors/stepstone.detector'
+import { tuberlinDetector } from './detectors/tuberlin.detector'
 import { genericExtractor } from './extractors/generic.extractor'
 import { linkedinExtractor } from './extractors/linkedin.extractor'
 import { indeedExtractor } from './extractors/indeed.extractor'
@@ -15,6 +16,7 @@ import { leverExtractor } from './extractors/lever.extractor'
 import { workdayExtractor } from './extractors/workday.extractor'
 import { personioExtractor } from './extractors/personio.extractor'
 import { stepstoneExtractor } from './extractors/stepstone.extractor'
+import { tuberlinExtractor } from './extractors/tuberlin.extractor'
 import { mountShadowHost, unmountShadowHost } from './shadow-host'
 import { mountOverlay } from './overlay-mount'   // static import — no CSP-blocked dynamic chunk
 import { startFeedAnnotation, startGenericListingScan } from './feed'
@@ -22,7 +24,7 @@ import type { ContentMessage, RawJobData } from '../types'
 
 const detectors = [
   linkedinDetector, indeedDetector, greenhouseDetector,
-  leverDetector, workdayDetector, personioDetector,
+  leverDetector, workdayDetector, personioDetector, tuberlinDetector,
   stepstoneDetector, genericDetector,
 ]
 
@@ -34,6 +36,7 @@ const extractors: Record<string, typeof genericExtractor> = {
   workday: workdayExtractor,
   personio: personioExtractor,
   stepstone: stepstoneExtractor,
+  tuberlin: tuberlinExtractor,
   generic: genericExtractor,
 }
 

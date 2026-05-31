@@ -9,11 +9,13 @@ type Tab = 'dashboard' | 'jobs'
 const LISTED_ORIGINS = [
   'linkedin.com', 'indeed.', 'glassdoor.', 'stepstone.de',
   'greenhouse.io', 'lever.co', 'myworkdayjobs.com', 'ashbyhq.com', 'personio.',
+  'jobs.tu-berlin.de',
 ]
 const JOB_URL_SIGNALS = [
   '/job/', '/jobs/', '/career/', '/careers/', '/karriere/', '/stellenangebote/',
   '/vacancy/', '/vacancies/', '/position/', '/positions/', '/opening/', '/openings/',
   '/stellenanzeige/', '/jobangebote/', '/search/', '/offre/',
+  '/job-postings', '/job-posting',
 ]
 
 function looksLikeCareerPage(url: string): boolean {

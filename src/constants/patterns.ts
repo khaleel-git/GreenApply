@@ -67,4 +67,5 @@ export const JOB_URL_PATTERNS = [
   '/vacancies/', '/vacancy/', '/position/', '/positions/', '/offres/', '/offre/',
   '/hiring/', '/work-with-us/', '/join-us/', '/opening/', '/openings/',
   '/stellenanzeige/', '/jobangebote/',
+  '/job-postings', '/job-posting',   // TU Berlin & similar portals
 ]

@@ -92,7 +92,7 @@ function injectQuickTags(el: Element, tags: QuickTag[]): void {
 // Generic listing-page scanner — runs on any page with job cards
 function scanGenericListingCards(): void {
   // Look for elements that carry a job link pointing to a URL with typical job path segments
-  const jobLinkPattern = /\/(job|jobs|career|careers|vacancy|vacancies|position|stellenangebote|stelle)\//i
+  const jobLinkPattern = /\/(job|jobs|job-postings?|career|careers|vacancy|vacancies|position|stellenangebote|stelle)\//i
   const cards = new Set<Element>()
 
   document.querySelectorAll('a[href]').forEach(a => {
