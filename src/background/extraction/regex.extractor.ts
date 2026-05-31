@@ -82,7 +82,7 @@ export function extractEmploymentType(text: string): { type: string; confidence:
   for (const { pattern, type } of EMPLOYMENT_PATTERNS) {
     if (pattern.test(text)) return { type, confidence: 0.92 }
   }
-  return { type: 'full-time', confidence: 0.35 }
+  return { type: 'unknown', confidence: 0.10 }
 }
 
 export function extractExperienceYears(text: string): { years: number | undefined; confidence: number } {

@@ -15,7 +15,7 @@ function mergeWithDefaults(base: Partial<ExtractionResult>, jobId: string): Extr
     requiredLanguages: base.requiredLanguages ?? [],
     requiredExperienceYears: base.requiredExperienceYears,
     visa: base.visa ?? { value: 'unknown', confidence: 0.10, evidence: [] },
-    employmentType: base.employmentType ?? 'full-time',
+    employmentType: base.employmentType ?? 'unknown',
     remote: base.remote ?? false,
     salary: base.salary,
     postedDate: base.postedDate,
@@ -40,9 +40,13 @@ export async function runExtractionPipeline(raw: RawJobData): Promise<Extraction
   const jsonldResult = extractFromJsonLd(description, jobId)
 
   // Step 2: Regex extraction (free, instant)
+  // Employment type: prepend the job title so "Student assistant" / "Werkstudent"
+  // in the title is detected even when the body text doesn't repeat it. Many ATS
+  // systems (Taleo, Oracle) hardcode FULL_TIME in JSON-LD regardless of actual type.
+  const empText = [raw.title, description].filter(Boolean).join('\n')
   const visaResult = extractVisa(description)
   const { reqs: langReqs, confidence: langConf } = extractLanguages(description)
-  const { type: empType, confidence: empConf } = extractEmploymentType(description)
+  const { type: empType, confidence: empConf } = extractEmploymentType(empText)
   const { years: expYears, confidence: expConf } = extractExperienceYears(description)
   const { value: remoteValue } = extractRemote(description)
   const { salary, confidence: salConf } = extractSalary(description)
@@ -62,7 +66,9 @@ export async function runExtractionPipeline(raw: RawJobData): Promise<Extraction
     visa: jsonldResult?.visa?.confidence ?? 0 > visaResult.confidence
       ? jsonldResult!.visa!
       : visaResult,
-    employmentType: jsonldResult?.employmentType ?? empType,
+    // Regex wins when it found a specific type (conf > 0.5) — many ATS systems
+    // (Taleo/Oracle) hardcode FULL_TIME in JSON-LD even for student/intern roles.
+    employmentType: empConf > 0.5 ? empType : (jsonldResult?.employmentType ?? empType),
     remote: jsonldResult?.remote ?? remoteValue,
     salary: jsonldResult?.salary ?? salary,
     postedDate: jsonldResult?.postedDate,

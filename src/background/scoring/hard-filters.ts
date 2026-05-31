@@ -60,9 +60,10 @@ export function runHardFilters(
     })
   }
 
-  // Employment type mismatch
+  // Employment type mismatch — skip when type is 'unknown' (no pattern matched)
   if (
     extraction.employmentType &&
+    extraction.employmentType !== 'unknown' &&
     profile.preferences.jobTypes.length > 0 &&
     !profile.preferences.jobTypes.includes(extraction.employmentType as never)
   ) {

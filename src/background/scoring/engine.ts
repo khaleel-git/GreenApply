@@ -51,6 +51,7 @@ function locationScore(extraction: ExtractionResult, prefs: UserPreferences): nu
 }
 
 function employmentTypeScore(type: string, preferred: UserPreferences['jobTypes']): number {
+  if (type === 'unknown') return 70  // no confident detection — neutral, don't penalize
   if (preferred.length === 0) return 80
   return preferred.includes(type as never) ? 100 : 20
 }
