@@ -63,6 +63,7 @@ export interface UserProfile {
   resume?: ResumeProfile
   preferences: UserPreferences
   languages: LanguageEntry[]
+  skills?: string[]        // manually entered skills — merged with resume-detected skills for scoring
   createdAt: number
   updatedAt: number
 }

@@ -1,11 +1,23 @@
-export const LANGUAGE_PATTERNS: RegExp[] = [
-  /\b(German|Deutsch|Deutschkenntnisse)\s*(C2|C1|B2|B1|A2|A1|native|Muttersprachler|fließend|fluent|verhandlungssicher)\b/i,
-  /\b(English|Englisch)\s*(C2|C1|B2|B1|native|fluent|proficient|business)\b/i,
-  /\b(French|Französisch)\s*(C2|C1|B2|native|fluent)\b/i,
-  /\b(Spanish|Spanisch)\s*(C2|C1|B2|native|fluent)\b/i,
-  /(German|Deutsch(kenntnisse)?)\s+(?:ist\s+)?(?:erforderlich|required|mandatory|Voraussetzung)/i,
-  /(?:Sprache|language)\s*(?:requirements?|Anforderungen?):?\s*(German|Deutsch|English|Englisch)/i,
+// Languages we recognise. `rx` is matched globally to find every mention; the
+// extractor then inspects a small window around each mention for a level or a
+// fluency/requirement signal. Keeping the language match separate from the level
+// match is what lets us catch "Good German skills (at least B2 …)" — where the
+// level does not sit immediately after the language name.
+export const LANGUAGE_DEFS: { canonical: string; rx: RegExp }[] = [
+  { canonical: 'German',  rx: /\b(?:German|Deutsch(?:kenntnisse|sprachkenntnisse)?)\b/gi },
+  { canonical: 'English', rx: /\b(?:English|Englisch(?:kenntnisse)?)\b/gi },
+  { canonical: 'French',  rx: /\b(?:French|Französisch|Franzoesisch)\b/gi },
+  { canonical: 'Spanish', rx: /\b(?:Spanish|Spanisch)\b/gi },
 ]
+
+// Signals looked for in the window around a language mention.
+export const CEFR_LEVEL_RE = /\b(C2|C1|B2|B1|A2|A1)\b/i
+export const NATIVE_LEVEL_RE = /\b(native|mother\s*tongue|Muttersprach(?:e|ler(?:in)?)?)\b/i
+export const FLUENT_LEVEL_RE = /\b(fluent|fließend|fliessend|verhandlungssicher|business[-\s]?fluent|proficient|proficiency|excellent\s+command)\b/i
+// A requirement is present even without an explicit level (defaults to B2).
+export const LANG_REQUIRED_CTX_RE = /\b(required|requirement|mandatory|erforderlich|Voraussetzung|necessary|notwendig|essential|vorausgesetzt|zwingend|good\s+(?:command|knowledge)|sehr\s+gute|gute\s+Kenntnisse|in\s+German|in\s+Deutsch|auf\s+Deutsch|working\s+language|Arbeitssprache)\b/i
+// Marks a language as nice-to-have rather than a hard requirement.
+export const LANG_OPTIONAL_CTX_RE = /\b(nice\s+to\s+have|of\s+advantage|an\s+advantage|a\s+plus|von\s+Vorteil|wünschenswert|wuenschenswert|optional|bonus|preferred|ideally|idealerweise)\b/i
 
 export const VISA_PATTERNS: Array<{ pattern: RegExp; result: boolean | 'unknown' }> = [
   { pattern: /visa\s*sponsorship\s*(is\s*)?(not\s*)?(available|provided|offered|possible)/i, result: false },

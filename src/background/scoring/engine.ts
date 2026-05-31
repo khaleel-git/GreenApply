@@ -93,15 +93,17 @@ export function computeMatch(
   const hardFilters = runHardFilters(job, extraction, profile)
   const hasBlocker = hardFilters.some(f => f.severity === 'blocker')
 
-  // Skill scoring
-  const resumeSkills = resume?.skills ?? []
+  // Skill scoring — combine résumé-detected skills with manually entered ones
+  const candidateSkills = [...(resume?.skills ?? []), ...(profile.skills ?? [])]
   const { score: skillsSc, matched, missing, bonus } = skillScore(
-    extraction.requiredSkills, extraction.niceToHaveSkills, resumeSkills,
+    extraction.requiredSkills, extraction.niceToHaveSkills, candidateSkills,
   )
 
-  // Other dimensions
+  // Other dimensions — profile.languages is the source of truth (seeded from the
+  // résumé on upload, editable in Options); fall back to résumé only if empty.
+  const userLanguages = profile.languages.length > 0 ? profile.languages : (resume?.languages ?? [])
   const experienceSc = resume ? experienceScore(extraction, resume) : 50
-  const { score: languageSc, gaps: languageGaps } = languageScore(extraction.requiredLanguages, resume?.languages ?? profile.languages)
+  const { score: languageSc, gaps: languageGaps } = languageScore(extraction.requiredLanguages, userLanguages)
   const locationSc = locationScore(extraction, prefs)
   const empTypeSc = employmentTypeScore(extraction.employmentType, prefs.jobTypes)
   const visaSc = visaScore(extraction.visa, profile.workAuth)

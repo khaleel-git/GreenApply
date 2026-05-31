@@ -1,5 +1,6 @@
 import type { ExtractionResult, VisaAssessment, LanguageRequirement, SalaryRange } from '../../types'
-import { VISA_PATTERNS, LANGUAGE_PATTERNS, EMPLOYMENT_PATTERNS } from '../../constants/patterns'
+import { VISA_PATTERNS, EMPLOYMENT_PATTERNS } from '../../constants/patterns'
+import { extractLanguages } from './regex.extractor'
 
 interface JsonLdJobPosting {
   '@type'?: string
@@ -65,16 +66,8 @@ function parseVisa(description: string): VisaAssessment {
 }
 
 function parseLanguages(description: string): LanguageRequirement[] {
-  const reqs: LanguageRequirement[] = []
-  for (const pattern of LANGUAGE_PATTERNS) {
-    const match = description.match(pattern)
-    if (match) {
-      const language = /german|deutsch/i.test(match[1]) ? 'German' : 'English'
-      const level = match[2] ?? 'unknown'
-      reqs.push({ language, minLevel: level, required: true })
-    }
-  }
-  return reqs
+  // Shared windowed detection — same logic the regex extractor uses.
+  return extractLanguages(description).reqs
 }
 
 function parseEmploymentType(posting: JsonLdJobPosting): string {
