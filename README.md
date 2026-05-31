@@ -1,122 +1,90 @@
 <div align="center">
   <img src="public/icons/icon128.png" alt="GreenApply Logo" width="80" />
   <h1>GreenApply</h1>
-  <p><strong>Know before you apply.</strong><br/>Instant AI-powered job-fit scoring for international students and professionals in Germany.</p>
+  <p><strong>Know before you apply.</strong><br/>Instant job fit scoring for international students and professionals in Germany.</p>
 
   <p>
     <img src="https://img.shields.io/badge/Manifest-V3-4ade80?style=flat-square" alt="MV3" />
     <img src="https://img.shields.io/badge/React-19-61dafb?style=flat-square&logo=react" alt="React 19" />
     <img src="https://img.shields.io/badge/TypeScript-5.7-3178c6?style=flat-square&logo=typescript" alt="TypeScript" />
-    <img src="https://img.shields.io/badge/NVIDIA_NIM-AI_Powered-76b900?style=flat-square" alt="NVIDIA NIM" />
   </p>
 </div>
 
 ---
 
-## What it does
+## What this does
 
-GreenApply is a Chrome extension that sits alongside job listings and instantly tells you how well a role matches your profile — before you spend 45 minutes writing a cover letter for a job that requires German C1.
+GreenApply is a Chrome extension that sits next to job listings and shows how well a role matches your profile before you spend time on an application.
 
-Open a job on LinkedIn, Stepstone, SAP SuccessFactors, or 20+ other platforms and you get a **match score**, a plain-English verdict, a skill gap breakdown, and a language-requirement check in under 3 seconds.
+Open a job on LinkedIn, Stepstone, SuccessFactors, or many other platforms and you get a match score, a clear recommendation, a skill gap breakdown, and a language check in seconds.
 
----
+## Key features
 
-## Features
+### Instant match scoring
 
-### 🎯 Instant Match Scoring
-
-Every job page gets a **0–100 score** and a colour-coded verdict the moment you open it. The score weighs skills, language requirements, employment type, location, experience, and salary — all against your profile.
+Each job page receives a 0 to 100 score and a colour coded recommendation as soon as you open it. The score compares skills, language needs, employment type, location, experience, and salary with your profile.
 
 <div align="center">
   <img src="docs/images/overlay-score.svg" alt="Match score overlay showing 78/100 Strong Apply with matched skills" width="320" />
 </div>
 
-> **Verdicts:** 🟢 Strong Apply · 🟡 Consider · 🟠 Stretch · 🔴 Skip
+Verdicts: 🟢 Strong Apply · 🟡 Consider · 🟠 Stretch · 🔴 Skip
 
----
+### Skill gap analysis
 
-### 🔍 Skill Gap Analysis
-
-See exactly which of your skills match the job requirements, which are missing, and which are nice-to-have bonuses — colour-coded at a glance.
+See which skills match the job, which are missing, and which are optional at a glance.
 
 <div align="center">
   <img src="docs/images/overlay-skills.svg" alt="Skill gap panel showing matched skills in green and missing skills in red" width="320" />
 </div>
 
----
+### Language requirement check
 
-### 🗣️ Language Requirement Detection
-
-GreenApply detects explicit German and English requirements from job descriptions using a multi-layer approach (JSON-LD → regex → AI), then compares them against your CEFR levels.
+GreenApply extracts explicit German and English requirements from job descriptions using a layered approach and compares them to your CEFR levels so you spot language needs early.
 
 <div align="center">
   <img src="docs/images/overlay-language.svg" alt="Language status showing German B1 vs required B2" width="320" />
 </div>
 
-No more discovering a C1 German requirement on page 3 of the application form.
+### Feed annotations
 
----
-
-### 📋 Feed Annotation
-
-On job listing pages (LinkedIn, Stepstone, etc.), GreenApply injects quick-read tags directly onto job cards — no need to open every listing.
+On job listing pages, GreenApply adds quick read tags to job cards so you do not need to open every listing.
 
 <div align="center">
   <img src="docs/images/feed-tags.svg" alt="Job listing cards annotated with Werkstudent, German B2, and match score badges" width="480" />
 </div>
 
-Tags shown:
-- Language requirements (`🇩🇪 German C1+`, `🇩🇪 German B2`, `🇬🇧 English req.`)
-- Job type (`Werkstudent`, `Internship`, `Thesis`)
-- Match score badge (on platforms where results are cached)
+Tags include language requirements, job type, and a match score badge where available.
 
----
+### Cover letter generator
 
-### ✉️ AI Cover Letter Generation
-
-One click generates a tailored cover letter that references your actual skills, experience, and the specific role — streamed live so you see it being written.
+One click produces a tailored cover letter that references your skills and relevant experience. The text is editable so you can refine the tone before sending.
 
 <div align="center">
-  <img src="docs/images/cover-letter.svg" alt="Cover letter generation panel streaming text for a Werkstudent AI role" width="320" />
+  <img src="docs/images/cover-letter.svg" alt="Cover letter generation panel streaming text for a Werkstudent role" width="320" />
 </div>
 
-The generator uses a semantic vector index of your résumé to pull in relevant achievements and avoids inflating your experience (no more "seasoned professional with 9 years" when you have 2).
+### Application form autofill
 
----
-
-### 📝 Application Form Auto-Fill
-
-When you navigate to an application form on SmartRecruiters, Greenhouse, Workday, or 15+ other ATS platforms, GreenApply detects the questions and generates answers:
+When you reach an application form on platforms like SmartRecruiters, Greenhouse, or Workday, GreenApply recognises common questions and suggests answers based on your profile.
 
 <div align="center">
   <img src="docs/images/application-qa.svg" alt="Application panel showing generated answers for Why are you excited, enrollment status, and work permit fields" width="320" />
 </div>
 
-| Question type | Source |
-|---|---|
-| "Why are you excited about this role?" | AI — personalised from job + your profile |
-| Enrollment status | Your academic profile |
-| Work permit / residence permit | Your work authorisation setting |
-| Availability period | Smart default (next month + 12 months) |
-| How did you hear about us | Sensible default |
+Question sources include your academic profile and sensible defaults. All suggested answers are editable before you submit.
 
-All answers are editable before you fill the form. Click **Fill** per field or **Fill All** in one go.
+### Academic profile
 
----
-
-### 🎓 Academic Profile
-
-Upload your transcript or enrollment letter and GreenApply auto-extracts your courses, certifications, and degree level. This feeds the academic relevance modifier in the match score and helps the cover letter reference specific coursework.
+Upload a transcript or enrollment letter and GreenApply extracts courses, certifications, and degree level to improve academic relevance in scoring and in cover letters.
 
 <div align="center">
   <img src="docs/images/academic-profile.svg" alt="Academic profile settings with extracted courses from transcript" width="560" />
 </div>
 
----
+## Supported platforms
 
-## Supported Platforms
-
-### ATS Platforms (with dedicated extractors)
+### ATS platforms
 
 | Platform | Coverage |
 |---|---|
@@ -133,7 +101,7 @@ Upload your transcript or enrollment letter and GreenApply auto-extracts your co
 | Recruitee | `*.recruitee.com` |
 | softgarden | `*.softgarden.de` |
 
-### Job Boards
+### Job boards
 
 | Platform | Region |
 |---|---|
@@ -145,25 +113,22 @@ Upload your transcript or enrollment letter and GreenApply auto-extracts your co
 | Xing | DE / DACH |
 | JobTeaser | EU (students) |
 | Absolventa | DE (students) |
-| Workwise (Campusjäger) | DE (students) |
+| Workwise Campusjager | DE (students) |
 | JOIN | DE (startups) |
 | Jobware | DE |
 | Fetchjobs | DE |
 | TU Berlin Jobs | DE |
 
-Any other company career page is handled automatically via generic JSON-LD + DOM extraction.
+Any company career page is handled automatically using JSON LD and DOM extraction.
 
----
-
-## Getting Started
+## Getting started
 
 ### Prerequisites
 
-- Chrome / Chromium 120+
-- Node.js 20+
-- An [NVIDIA NIM API key](https://build.nvidia.com) (free tier available) — required for AI features (cover letter, application Q&A, score explanation)
+- Chrome or Chromium 120 or later
+- Node.js 20 or later
 
-### Installation (development)
+### Installation for development
 
 ```bash
 git clone https://github.com/yourusername/greenapply.git
@@ -172,22 +137,20 @@ npm install
 npm run build
 ```
 
-1. Open Chrome → `chrome://extensions`
-2. Enable **Developer mode** (top right)
-3. Click **Load unpacked** → select the `dist/` folder
+1. Open Chrome and go to `chrome://extensions`
+2. Enable Developer mode (top right)
+3. Click Load unpacked and choose the `dist/` folder
 
 ### Setup
 
-1. Click the GreenApply icon → **Settings**
-2. **Resume** tab — upload your PDF or DOCX résumé (parsed locally, never uploaded)
-3. **Languages & Skills** tab — verify detected languages and skills, adjust CEFR levels
-4. **Academic** tab — upload your transcript to enable academic matching
-5. **Preferences** tab — set job types, remote preference, minimum salary
-6. **AI Features** tab — paste your NVIDIA NIM API key
+1. Click the GreenApply icon and open Settings
+2. Resume tab — upload your PDF or DOCX resume (parsed locally, not uploaded)
+3. Languages and Skills tab — verify detected languages and skills and adjust CEFR levels
+4. Academic tab — upload your transcript to enable academic matching
+5. Preferences tab — set job types, remote preference, and minimum salary
+6. Optional features tab — configure any external services you want to use
 
----
-
-## How Scoring Works
+## How scoring works
 
 ```
 Score = Skills × 35%
@@ -196,37 +159,29 @@ Score = Skills × 35%
       + Location × 10%
       + Employment Type × 10%
       + Salary × 5%
-      + Academic Relevance modifier (±10 pts)
-      + Job Freshness modifier (±3 pts)
+      + Academic relevance modifier (±10 pts)
+      + Job freshness modifier (±3 pts)
 ```
 
-**Hard filters** (visa blocking, wrong employment type, excluded company) cap the score at 34 and flip the recommendation to 🔴 Skip regardless of other factors.
+Hard filters such as visa restrictions, wrong employment type, or excluded companies cap the score and change the recommendation to Skip regardless of other factors.
 
----
-
-## Tech Stack
+## Tech stack
 
 | Layer | Technology |
 |---|---|
-| Extension framework | Chrome MV3, CRXJS + Vite |
-| UI | React 19, inline styles (no external CSS deps) |
-| AI inference | NVIDIA NIM (Llama 3.1 8B for extraction, Llama 3.3 70B for cover letters) |
-| Embeddings | `baai/bge-m3` via NIM |
-| Storage | IndexedDB via `idb` |
+| Extension framework | Chrome MV3, CRXJS and Vite |
+| UI | React 19, inline styles |
+| Optional inference | Configurable external service |
+| Storage | IndexedDB using `idb` |
 | PDF parsing | `pdfjs-dist` |
 | DOCX parsing | `mammoth` |
 | Language | TypeScript 5.7 |
 
----
-
 ## Privacy
 
-- All résumé parsing happens **locally in your browser**
-- Job data and your profile stay in local IndexedDB — never sent to any server
-- The only external calls are to the NVIDIA NIM API (when you have an API key configured), carrying only the job description text and anonymised profile signals
+- Resume parsing happens locally in your browser
+- Job data and your profile remain in local IndexedDB and are not sent to a server by default
 - No analytics, no tracking, no accounts required
-
----
 
 ## License
 
