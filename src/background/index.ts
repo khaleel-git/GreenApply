@@ -6,6 +6,11 @@ import { handleSaveApplication, handleUpdateStatus, handleGetApplications } from
 import { handleGenerateCoverLetter } from './handlers/generate.handler'
 import { getMetrics } from './db/metrics.store'
 import { getRules, saveRule } from './db/rules.store'
+import { stripCachedSummaries } from './db/matches.store'
+
+// On each SW startup, evict any cached LLM summaries that reference removed
+// features (e.g. visa) so they're regenerated cleanly on next job visit.
+stripCachedSummaries().catch(() => {})
 
 // Sites already handled by declarative content_scripts — skip dynamic injection
 const LISTED_ORIGINS = [

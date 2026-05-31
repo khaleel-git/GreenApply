@@ -13,7 +13,6 @@ export async function generateScoreExplanation(match: MatchResult): Promise<stri
       ? `Language gaps: ${skillGap.languageGaps.filter(g => !g.met).map(g => `${g.language} (required ${g.required}, has ${g.actual ?? 'none'})`).join(', ')}`
       : null,
     hardFilters.length > 0 ? `Hard filters: ${hardFilters.map(f => f.message).join(' | ')}` : null,
-    `Visa compatibility: ${breakdown.visaCompatibility}/100`,
     `Location score: ${breakdown.location}/100`,
   ].filter(Boolean).join('\n')
 

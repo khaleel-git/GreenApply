@@ -18,3 +18,17 @@ export async function clearMatches(): Promise<void> {
   const db = await getDB()
   await db.clear('matches')
 }
+
+// Strip the LLM summary from all cached matches so stale explanations (e.g.
+// ones that mentioned visa before the feature was removed) are regenerated on
+// the next visit without requiring a full re-score.
+export async function stripCachedSummaries(): Promise<void> {
+  const db = await getDB()
+  const all = await db.getAll('matches')
+  for (const m of all) {
+    if (m.summary) {
+      const { summary: _, ...rest } = m as MatchResult & { summary?: string }
+      await db.put('matches', rest)
+    }
+  }
+}
