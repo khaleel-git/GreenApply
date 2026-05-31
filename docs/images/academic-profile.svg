@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="440" viewBox="0 0 720 440">
+  <rect width="720" height="440" fill="#f9fafb"/>
+
+  <!-- ── sidebar ─────────────────────────────────────────── -->
+  <rect x="0" y="0" width="200" height="440" fill="#f9fafb" stroke="#e5e7eb" stroke-width="1"/>
+  <!-- logo -->
+  <circle cx="28" cy="32" r="10" fill="#16a34a"/>
+  <text x="44" y="37" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="15" font-weight="700" fill="#111827">GreenApply</text>
+  <!-- nav items -->
+  <text x="20" y="78" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="13" fill="#374151">📄 Resume</text>
+  <!-- active item -->
+  <rect x="0" y="88" width="200" height="36" fill="white"/>
+  <rect x="0" y="88" width="3" height="36" fill="#16a34a"/>
+  <text x="20" y="112" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="13" font-weight="600" fill="#16a34a">🎓 Academic</text>
+  <text x="20" y="142" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="13" fill="#374151">👤 Profile</text>
+  <text x="20" y="172" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="13" fill="#374151">🗣️ Languages &amp; Skills</text>
+  <text x="20" y="202" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="13" fill="#374151">⚙️ Preferences</text>
+  <text x="20" y="232" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="13" fill="#374151">🔑 AI Features</text>
+
+  <!-- ── main content ───────────────────────────────────── -->
+  <!-- heading -->
+  <text x="228" y="48" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="18" font-weight="700" fill="#111827">Academic Profile</text>
+  <text x="228" y="66" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="12" fill="#6b7280">Upload your transcript to enable academic-relevance matching.</text>
+
+  <!-- degree level chips -->
+  <text x="228" y="96" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="12" font-weight="600" fill="#374151">Degree Level</text>
+  <!-- active chip -->
+  <rect x="228" y="104" width="130" height="28" rx="14" fill="#f0fdf4" stroke="#16a34a" stroke-width="2"/>
+  <text x="293" y="122" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" font-weight="700" fill="#16a34a" text-anchor="middle">Master Student</text>
+  <!-- inactive chips -->
+  <rect x="366" y="104" width="130" height="28" rx="14" fill="white" stroke="#d1d5db" stroke-width="1"/>
+  <text x="431" y="122" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="#374151" text-anchor="middle">Bachelor Student</text>
+  <rect x="504" y="104" width="90" height="28" rx="14" fill="white" stroke="#d1d5db" stroke-width="1"/>
+  <text x="549" y="122" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="#374151" text-anchor="middle">PhD Student</text>
+
+  <!-- field + university -->
+  <text x="228" y="158" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="12" font-weight="600" fill="#374151">Field of Study</text>
+  <rect x="228" y="166" width="220" height="32" rx="8" fill="white" stroke="#d1d5db" stroke-width="1"/>
+  <text x="242" y="187" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="12" fill="#111827">Computer Science</text>
+
+  <text x="462" y="158" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="12" font-weight="600" fill="#374151">University</text>
+  <rect x="462" y="166" width="220" height="32" rx="8" fill="white" stroke="#d1d5db" stroke-width="1"/>
+  <text x="476" y="187" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="12" fill="#111827">TU Berlin</text>
+
+  <!-- upload zone -->
+  <text x="228" y="222" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="12" font-weight="600" fill="#374151">Upload Academic Documents</text>
+  <rect x="228" y="230" width="454" height="60" rx="10" fill="white" stroke="#d1d5db" stroke-width="1.5" stroke-dasharray="6,3"/>
+  <text x="455" y="255" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="20" fill="#9ca3af" text-anchor="middle">📄</text>
+  <text x="455" y="277" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="12" font-weight="500" fill="#374151" text-anchor="middle">✓  Transcript of Records BTU.pdf extracted successfully</text>
+
+  <!-- courses section -->
+  <text x="228" y="316" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="12" font-weight="600" fill="#374151">Courses (14)</text>
+  <text x="228" y="330" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="#6b7280">Auto-extracted · used to match you with relevant positions.</text>
+
+  <!-- course chips row 1 -->
+  <rect x="228" y="340" width="110" height="22" rx="11" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1"/>
+  <text x="283" y="355" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="10" fill="#1d4ed8" text-anchor="middle">Machine Learning</text>
+
+  <rect x="346" y="340" width="84" height="22" rx="11" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1"/>
+  <text x="388" y="355" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="10" fill="#1d4ed8" text-anchor="middle">Data Mining</text>
+
+  <rect x="438" y="340" width="104" height="22" rx="11" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1"/>
+  <text x="490" y="355" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="10" fill="#1d4ed8" text-anchor="middle">Natural Language Processing</text>
+
+  <rect x="550" y="340" width="88" height="22" rx="11" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1"/>
+  <text x="594" y="355" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="10" fill="#1d4ed8" text-anchor="middle">Knowledge Graphs</text>
+
+  <!-- course chips row 2 -->
+  <rect x="228" y="368" width="80" height="22" rx="11" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1"/>
+  <text x="268" y="383" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="10" fill="#1d4ed8" text-anchor="middle">Computer Vision</text>
+
+  <rect x="316" y="368" width="76" height="22" rx="11" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1"/>
+  <text x="354" y="383" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="10" fill="#1d4ed8" text-anchor="middle">Deep Learning</text>
+
+  <rect x="400" y="368" width="96" height="22" rx="11" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1"/>
+  <text x="448" y="383" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="10" fill="#1d4ed8" text-anchor="middle">Software Engineering</text>
+
+  <rect x="504" y="368" width="84" height="22" rx="11" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1"/>
+  <text x="546" y="383" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="10" fill="#1d4ed8" text-anchor="middle">Database Systems</text>
+
+  <!-- save button -->
+  <rect x="228" y="404" width="160" height="36" rx="8" fill="#16a34a"/>
+  <text x="308" y="426" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="13" font-weight="700" fill="white" text-anchor="middle">Save Academic Profile</text>
+</svg>

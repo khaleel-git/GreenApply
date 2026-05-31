@@ -28,7 +28,7 @@ Open a job on LinkedIn, Stepstone, SAP SuccessFactors, or 20+ other platforms an
 Every job page gets a **0–100 score** and a colour-coded verdict the moment you open it. The score weighs skills, language requirements, employment type, location, experience, and salary — all against your profile.
 
 <div align="center">
-  <img src="docs/images/overlay-score.png" alt="Match score overlay showing 78/100 Strong Apply with matched skills" width="320" />
+  <img src="docs/images/overlay-score.svg" alt="Match score overlay showing 78/100 Strong Apply with matched skills" width="320" />
 </div>
 
 > **Verdicts:** 🟢 Strong Apply · 🟡 Consider · 🟠 Stretch · 🔴 Skip
@@ -40,7 +40,7 @@ Every job page gets a **0–100 score** and a colour-coded verdict the moment yo
 See exactly which of your skills match the job requirements, which are missing, and which are nice-to-have bonuses — colour-coded at a glance.
 
 <div align="center">
-  <img src="docs/images/overlay-skills.png" alt="Skill gap panel showing matched skills in green and missing skills in red" width="320" />
+  <img src="docs/images/overlay-skills.svg" alt="Skill gap panel showing matched skills in green and missing skills in red" width="320" />
 </div>
 
 ---
@@ -50,7 +50,7 @@ See exactly which of your skills match the job requirements, which are missing, 
 GreenApply detects explicit German and English requirements from job descriptions using a multi-layer approach (JSON-LD → regex → AI), then compares them against your CEFR levels.
 
 <div align="center">
-  <img src="docs/images/overlay-language.png" alt="Language status showing German B1 vs required B2" width="320" />
+  <img src="docs/images/overlay-language.svg" alt="Language status showing German B1 vs required B2" width="320" />
 </div>
 
 No more discovering a C1 German requirement on page 3 of the application form.
@@ -62,7 +62,7 @@ No more discovering a C1 German requirement on page 3 of the application form.
 On job listing pages (LinkedIn, Stepstone, etc.), GreenApply injects quick-read tags directly onto job cards — no need to open every listing.
 
 <div align="center">
-  <img src="docs/images/feed-tags.png" alt="Job listing cards annotated with Werkstudent, German B2, and match score badges" width="480" />
+  <img src="docs/images/feed-tags.svg" alt="Job listing cards annotated with Werkstudent, German B2, and match score badges" width="480" />
 </div>
 
 Tags shown:
@@ -77,7 +77,7 @@ Tags shown:
 One click generates a tailored cover letter that references your actual skills, experience, and the specific role — streamed live so you see it being written.
 
 <div align="center">
-  <img src="docs/images/cover-letter.png" alt="Cover letter generation panel streaming text for a Werkstudent AI role" width="320" />
+  <img src="docs/images/cover-letter.svg" alt="Cover letter generation panel streaming text for a Werkstudent AI role" width="320" />
 </div>
 
 The generator uses a semantic vector index of your résumé to pull in relevant achievements and avoids inflating your experience (no more "seasoned professional with 9 years" when you have 2).
@@ -89,7 +89,7 @@ The generator uses a semantic vector index of your résumé to pull in relevant 
 When you navigate to an application form on SmartRecruiters, Greenhouse, Workday, or 15+ other ATS platforms, GreenApply detects the questions and generates answers:
 
 <div align="center">
-  <img src="docs/images/application-qa.png" alt="Application panel showing generated answers for Why are you excited, enrollment status, and work permit fields" width="320" />
+  <img src="docs/images/application-qa.svg" alt="Application panel showing generated answers for Why are you excited, enrollment status, and work permit fields" width="320" />
 </div>
 
 | Question type | Source |
@@ -109,7 +109,7 @@ All answers are editable before you fill the form. Click **Fill** per field or *
 Upload your transcript or enrollment letter and GreenApply auto-extracts your courses, certifications, and degree level. This feeds the academic relevance modifier in the match score and helps the cover letter reference specific coursework.
 
 <div align="center">
-  <img src="docs/images/academic-profile.png" alt="Academic profile settings with extracted courses from transcript" width="560" />
+  <img src="docs/images/academic-profile.svg" alt="Academic profile settings with extracted courses from transcript" width="560" />
 </div>
 
 ---
@@ -225,22 +225,6 @@ Score = Skills × 35%
 - Job data and your profile stay in local IndexedDB — never sent to any server
 - The only external calls are to the NVIDIA NIM API (when you have an API key configured), carrying only the job description text and anonymised profile signals
 - No analytics, no tracking, no accounts required
-
----
-
-## Adding Screenshots
-
-Drop screenshots into `docs/images/` with the filenames referenced above:
-
-| File | Content |
-|---|---|
-| `overlay-score.png` | Score ring + recommendation badge |
-| `overlay-skills.png` | Matched / missing skills panel |
-| `overlay-language.png` | Language status rows |
-| `feed-tags.png` | Annotated job cards on a listing page |
-| `cover-letter.png` | Cover letter generation streaming |
-| `application-qa.png` | Application form Q&A panel |
-| `academic-profile.png` | Academic settings page |
 
 ---
 

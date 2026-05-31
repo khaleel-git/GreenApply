@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="300" viewBox="0 0 360 300">
+  <rect width="360" height="300" fill="#e5e7eb"/>
+  <rect x="22" y="22" width="320" height="258" rx="12" fill="rgba(0,0,0,0.08)"/>
+  <rect x="20" y="20" width="320" height="258" rx="12" fill="white" stroke="#e5e7eb" stroke-width="1"/>
+
+  <!-- header -->
+  <rect x="20" y="20" width="320" height="44" rx="12" fill="white" stroke="#e5e7eb" stroke-width="1"/>
+  <rect x="20" y="52" width="320" height="14" fill="white"/>
+  <circle cx="38" cy="42" r="7" fill="#16a34a"/>
+  <text x="52" y="47" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="13" font-weight="700" fill="#111827">GreenApply — Skill Gap</text>
+
+  <!-- section label -->
+  <text x="34" y="86" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="12" font-weight="600" fill="#374151">Skills</text>
+
+  <!-- matched (green) -->
+  <rect x="34" y="96" width="102" height="22" rx="11" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1"/>
+  <text x="44" y="111" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="#16a34a">data analysis</text>
+
+  <rect x="143" y="96" width="118" height="22" rx="11" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1"/>
+  <text x="153" y="111" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="#16a34a">data visualization</text>
+
+  <rect x="268" y="96" width="40" height="22" rx="11" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1"/>
+  <text x="278" y="111" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="#16a34a">SQL</text>
+
+  <rect x="34" y="124" width="60" height="22" rx="11" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1"/>
+  <text x="44" y="139" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="#16a34a">Python</text>
+
+  <rect x="101" y="124" width="116" height="22" rx="11" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1"/>
+  <text x="111" y="139" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="#16a34a">machine learning</text>
+
+  <rect x="224" y="124" width="84" height="22" rx="11" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1"/>
+  <text x="234" y="139" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="#16a34a">data science</text>
+
+  <!-- missing (red) -->
+  <rect x="34" y="152" width="88" height="22" rx="11" fill="#fef2f2" stroke="#fecaca" stroke-width="1"/>
+  <text x="44" y="167" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="#dc2626">✗ TensorFlow</text>
+
+  <rect x="129" y="152" width="72" height="22" rx="11" fill="#fef2f2" stroke="#fecaca" stroke-width="1"/>
+  <text x="139" y="167" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="#dc2626">✗ Tableau</text>
+
+  <rect x="208" y="152" width="100" height="22" rx="11" fill="#fef2f2" stroke="#fecaca" stroke-width="1"/>
+  <text x="218" y="167" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="#dc2626">✗ Apache Spark</text>
+
+  <!-- missing count note -->
+  <text x="34" y="196" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="#6b7280">3 required skills missing</text>
+
+  <!-- legend -->
+  <rect x="34" y="218" width="14" height="14" rx="7" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1"/>
+  <text x="54" y="229" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="#6b7280">Matched</text>
+
+  <rect x="118" y="218" width="14" height="14" rx="7" fill="#fef2f2" stroke="#fecaca" stroke-width="1"/>
+  <text x="138" y="229" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="#6b7280">Missing</text>
+
+  <rect x="200" y="218" width="14" height="14" rx="7" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1"/>
+  <text x="220" y="229" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="#6b7280">Nice-to-have</text>
+
+  <!-- divider -->
+  <line x1="34" y1="248" x2="326" y2="248" stroke="#f3f4f6" stroke-width="1"/>
+  <text x="34" y="265" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="10" fill="#9ca3af">Detected by: AI (LLM) · confidence 92%</text>
+</svg>

@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="510" viewBox="0 0 360 510">
+  <!-- page bg -->
+  <rect width="360" height="510" fill="#e5e7eb"/>
+
+  <!-- card shadow -->
+  <rect x="22" y="22" width="320" height="468" rx="12" fill="rgba(0,0,0,0.10)"/>
+
+  <!-- ── HEADER ───────────────────────────────────────────── -->
+  <rect x="20" y="20" width="320" height="44" rx="12" fill="white" stroke="#e5e7eb" stroke-width="1"/>
+  <rect x="20" y="52" width="320" height="12" fill="white"/>
+  <!-- green dot -->
+  <circle cx="38" cy="42" r="7" fill="#16a34a"/>
+  <text x="52" y="47" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="13" font-weight="700" fill="#111827">GreenApply</text>
+  <text x="330" y="47" font-family="sans-serif" font-size="12" fill="#9ca3af" text-anchor="end">▼</text>
+
+  <!-- ── BODY ────────────────────────────────────────────── -->
+  <rect x="20" y="62" width="320" height="426" rx="0" fill="white" stroke="#e5e7eb" stroke-width="1"/>
+  <rect x="20" y="62" width="320" height="12" fill="white"/>
+  <rect x="20" y="476" width="320" height="12" rx="12" fill="white"/>
+  <rect x="20" y="62" width="320" height="426" fill="none" stroke="#e5e7eb" stroke-width="1" rx="12"/>
+  <!-- cover top seam -->
+  <rect x="21" y="62" width="318" height="4" fill="white"/>
+
+  <!-- padding group: content starts at y=76 -->
+
+  <!-- ── SCORE ROW ─────────────────────────────────────── -->
+  <!-- ring bg -->
+  <circle cx="82" cy="114" r="40" fill="none" stroke="#e5e7eb" stroke-width="6"/>
+  <!-- ring progress ~80% (288° of 360°) -->
+  <circle cx="82" cy="114" r="40" fill="none" stroke="#16a34a" stroke-width="6"
+          stroke-dasharray="201 251" stroke-dashoffset="63"
+          stroke-linecap="round" transform="rotate(-90 82 114)"/>
+  <text x="82" y="110" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="22" font-weight="700" fill="#16a34a" text-anchor="middle">78</text>
+  <text x="82" y="126" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="#6b7280" text-anchor="middle">/ 100</text>
+
+  <!-- recommendation badge -->
+  <rect x="142" y="90" width="160" height="36" rx="18" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1.5"/>
+  <circle cx="163" cy="108" r="6" fill="#16a34a"/>
+  <text x="175" y="113" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="14" font-weight="700" fill="#16a34a">Strong Apply</text>
+
+  <!-- ── MATCHED SKILLS ──────────────────────────────────── -->
+  <text x="34" y="172" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="12" font-weight="600" fill="#374151">Matched Skills</text>
+
+  <!-- row 1 chips -->
+  <rect x="34" y="182" width="102" height="22" rx="11" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1"/>
+  <text x="44" y="197" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="#16a34a">✓ data analysis</text>
+
+  <rect x="143" y="182" width="88" height="22" rx="11" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1"/>
+  <text x="153" y="197" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="#16a34a">✓ SQL</text>
+
+  <rect x="237" y="182" width="68" height="22" rx="11" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1"/>
+  <text x="247" y="197" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="#16a34a">✓ Python</text>
+
+  <!-- row 2 chips -->
+  <rect x="34" y="210" width="116" height="22" rx="11" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1"/>
+  <text x="44" y="225" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="#16a34a">✓ machine learning</text>
+
+  <rect x="157" y="210" width="90" height="22" rx="11" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1"/>
+  <text x="167" y="225" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="#16a34a">✓ data science</text>
+
+  <!-- row 3 -->
+  <rect x="34" y="238" width="76" height="22" rx="11" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1"/>
+  <text x="44" y="253" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="#16a34a">✓ statistics</text>
+
+  <rect x="117" y="238" width="84" height="22" rx="11" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1"/>
+  <text x="127" y="253" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="#16a34a">✓ data mining</text>
+
+  <!-- ── LANGUAGE STATUS ─────────────────────────────────── -->
+  <text x="34" y="285" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="12" font-weight="600" fill="#374151">Language Status</text>
+
+  <!-- German row – red / not met -->
+  <rect x="34" y="294" width="288" height="30" rx="6" fill="#fef2f2" stroke="#fecaca" stroke-width="1"/>
+  <text x="44" y="314" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="12" fill="#374151">🇩🇪 German</text>
+  <rect x="108" y="300" width="62" height="17" rx="8" fill="#dcfce7" stroke="#86efac" stroke-width="1"/>
+  <text x="139" y="313" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="9" font-weight="700" fill="#166534" text-anchor="middle">REQUIRED</text>
+  <text x="314" y="314" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" font-weight="600" fill="#dc2626" text-anchor="end">B1 / B2 ✗</text>
+
+  <!-- English row – green / met -->
+  <rect x="34" y="330" width="288" height="30" rx="6" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1"/>
+  <text x="44" y="350" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="12" fill="#374151">🇬🇧 English</text>
+  <rect x="110" y="336" width="62" height="17" rx="8" fill="#dcfce7" stroke="#86efac" stroke-width="1"/>
+  <text x="141" y="349" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="9" font-weight="700" fill="#166534" text-anchor="middle">REQUIRED</text>
+  <text x="314" y="350" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" font-weight="600" fill="#16a34a" text-anchor="end">C1 / B2 ✓</text>
+
+  <!-- ── SUMMARY TEXT ─────────────────────────────────────── -->
+  <text x="34" y="384" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="#374151">Strong match on technical skills — Python, SQL, and</text>
+  <text x="34" y="399" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="#374151">ML. Slight German language gap (B1 vs required B2)</text>
+  <text x="34" y="414" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="#374151">is the only blocker — worth applying.</text>
+
+  <!-- ── SAVE JOB BUTTON ─────────────────────────────────── -->
+  <rect x="34" y="430" width="288" height="40" rx="8" fill="#16a34a"/>
+  <text x="178" y="455" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="14" font-weight="700" fill="white" text-anchor="middle">Save Job</text>
+</svg>
