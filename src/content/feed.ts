@@ -228,16 +228,18 @@ async function scanCards(): Promise<void> {
     }
 
     // Request match from background — guard against missing runtime (iframe / reload)
-    if (typeof chrome === 'undefined' || !chrome.runtime) continue
-    chrome.runtime.sendMessage({ type: 'GET_MATCH', jobId: rawId }).then(
-      async (match: unknown) => {
-        if (match && typeof match === 'object' && 'score' in match) {
-          const m = match as MatchResult
-          matchCache.set(rawId, m)
-          await annotateCard(card, m)
-        }
-      },
-    ).catch(() => {})  // swallow extension context invalidated + network errors
+    if (typeof chrome === 'undefined' || !chrome.runtime?.id) continue
+    try {
+      chrome.runtime.sendMessage({ type: 'GET_MATCH', jobId: rawId }).then(
+        async (match: unknown) => {
+          if (match && typeof match === 'object' && 'score' in match) {
+            const m = match as MatchResult
+            matchCache.set(rawId, m)
+            await annotateCard(card, m)
+          }
+        },
+      ).catch(() => {})  // swallow async rejections
+    } catch { /* extension reloaded — context invalidated, ignore */ }
   }
 }
 

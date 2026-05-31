@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import type { MatchResult, ContentMessage, ExtractionResult } from '../types'
+import type { MatchResult, ContentMessage, ExtractionResult, FormQuestion, ApplicationAnswer } from '../types'
 import { ScoreRing } from './components/ScoreRing'
 import { RecommendationBadge } from './components/RecommendationBadge'
 import { HardFilterAlert } from './components/HardFilterAlert'
@@ -8,12 +8,15 @@ import { JobFreshness } from './components/JobFreshness'
 import { ActionButtons } from './components/ActionButtons'
 import { GeneratePanel } from './components/GeneratePanel'
 import { TrackingDropdown } from './components/TrackingDropdown'
+import { ApplicationPanel } from './components/ApplicationPanel'
 
 type State =
   | { status: 'idle' }
   | { status: 'loading' }
   | { status: 'result'; match: MatchResult; extraction?: ExtractionResult }
   | { status: 'error'; message: string }
+  | { status: 'app_loading'; questions: FormQuestion[] }
+  | { status: 'app_ready'; questions: FormQuestion[]; answers: ApplicationAnswer[] }
 
 export function Overlay() {
   const [state, setState] = useState<State>({ status: 'idle' })
@@ -30,6 +33,14 @@ export function Overlay() {
         setState(prev =>
           prev.status === 'result' ? { ...prev, extraction: msg.payload } : prev,
         )
+      } else if (msg.type === 'APPLICATION_LOADING') {
+        const qs = (msg as unknown as { questions?: FormQuestion[] }).questions ?? []
+        setState({ status: 'app_loading', questions: qs } as State)
+      } else if (msg.type === 'APPLICATION_ANSWERS') {
+        setState(prev => {
+          const questions = (prev as { questions?: FormQuestion[] }).questions ?? []
+          return { status: 'app_ready', questions, answers: msg.answers }
+        })
       }
     }
     window.addEventListener('greenapply:message', handler)
@@ -92,6 +103,31 @@ export function Overlay() {
               extraction={state.extraction}
               saved={saved}
               onSaved={() => setSaved(true)}
+            />
+          )}
+          {state.status === 'app_loading' && (
+            <AppLoadingState questions={state.questions} />
+          )}
+          {state.status === 'app_ready' && (
+            <ApplicationPanel
+              questions={state.questions}
+              answers={state.answers}
+              onFill={(questionId, value) => {
+                const q = state.questions.find(q => q.id === questionId)
+                if (!q) return
+                window.dispatchEvent(new CustomEvent('greenapply:fill', {
+                  detail: { selector: q.selector, value, isCombobox: q.type === 'select' && q.selector.includes('input') },
+                }))
+              }}
+              onFillAll={answers => {
+                for (const a of answers) {
+                  const q = state.questions.find(q => q.id === a.questionId)
+                  if (!q) continue
+                  window.dispatchEvent(new CustomEvent('greenapply:fill', {
+                    detail: { selector: q.selector, value: a.value, isCombobox: q.type === 'select' && q.selector.includes('input') },
+                  }))
+                }
+              }}
             />
           )}
         </div>
@@ -214,17 +250,46 @@ function MatchSummary({ match, extraction }: { match: MatchResult; extraction?: 
   )
 }
 
-function LoadingState() {
+function Spinner() {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0' }}>
+    <>
       <div style={{
         width: 16, height: 16, borderRadius: '50%',
         border: '2px solid #e5e7eb', borderTopColor: '#16a34a',
         animation: 'spin 0.8s linear infinite',
         flexShrink: 0,
       }} />
-      <span style={{ fontSize: 13, color: '#6b7280' }}>Analyzing job fit…</span>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </>
+  )
+}
+
+function LoadingState() {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0' }}>
+      <Spinner />
+      <span style={{ fontSize: 13, color: '#6b7280' }}>Analyzing job fit…</span>
+    </div>
+  )
+}
+
+function AppLoadingState({ questions }: { questions: FormQuestion[] }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <Spinner />
+        <span style={{ fontSize: 13, color: '#6b7280' }}>
+          Generating answers for {questions.length} question{questions.length !== 1 ? 's' : ''}…
+        </span>
+      </div>
+      {questions.map(q => (
+        <div key={q.id} style={{
+          padding: '6px 8px', borderRadius: 6, background: '#f9fafb',
+          border: '1px solid #e5e7eb', fontSize: 11, color: '#6b7280',
+        }}>
+          {q.text.length > 70 ? q.text.slice(0, 70) + '…' : q.text}
+        </div>
+      ))}
     </div>
   )
 }

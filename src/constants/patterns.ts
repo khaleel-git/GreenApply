@@ -4,7 +4,10 @@
 // match is what lets us catch "Good German skills (at least B2 …)" — where the
 // level does not sit immediately after the language name.
 export const LANGUAGE_DEFS: { canonical: string; rx: RegExp }[] = [
-  { canonical: 'German',  rx: /\b(?:German|Deutsch(?:kenntnisse|sprachkenntnisse)?|deutsch(?:e[nrsm]?|en|er|es)?(?:\s+Sprache|\s+Sprachkenntnisse|\s+Kenntnisse)?|deutschen\s+Sprache|deutsche\s+Sprache)\b/gi },
+  // "Deutsch" alone is NOT matched — it appears as a nav/language-switcher on every
+  // German-language site and is not evidence of a language requirement. Require
+  // an explicit compound (Deutschkenntnisse) or a language-phrase (deutsche Sprache).
+  { canonical: 'German',  rx: /\b(?:German|Deutsch(?:kenntnisse|sprachkenntnisse)|deutschen?\s+Sprache(?:kenntnisse)?)\b/gi },
   { canonical: 'English', rx: /\b(?:English|Englisch(?:kenntnisse)?)\b/gi },
   { canonical: 'French',  rx: /\b(?:French|Französisch|Franzoesisch)\b/gi },
   { canonical: 'Spanish', rx: /\b(?:Spanish|Spanisch)\b/gi },

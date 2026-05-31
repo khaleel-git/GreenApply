@@ -9,6 +9,20 @@ import { personioDetector } from './detectors/personio.detector'
 import { fetchjobsDetector } from './detectors/fetchjobs.detector'
 import { stepstoneDetector } from './detectors/stepstone.detector'
 import { tuberlinDetector } from './detectors/tuberlin.detector'
+import { successfactorsDetector } from './detectors/successfactors.detector'
+import { taleoDetector } from './detectors/taleo.detector'
+import { bamboohrDetector } from './detectors/bamboohr.detector'
+import { icimsDetector } from './detectors/icims.detector'
+import { recruiteeDetector } from './detectors/recruitee.detector'
+import { softgardenDetector } from './detectors/softgarden.detector'
+import { smartrecruitersDetector } from './detectors/smartrecruiters.detector'
+import { xingDetector } from './detectors/xing.detector'
+import { jobteaserDetector } from './detectors/jobteaser.detector'
+import { absolventaDetector } from './detectors/absolventa.detector'
+import { workwiseDetector } from './detectors/workwise.detector'
+import { joinDetector } from './detectors/join.detector'
+import { monsterDetector } from './detectors/monster.detector'
+import { jobwareDetector } from './detectors/jobware.detector'
 import { genericExtractor } from './extractors/generic.extractor'
 import { linkedinExtractor } from './extractors/linkedin.extractor'
 import { indeedExtractor } from './extractors/indeed.extractor'
@@ -19,15 +33,29 @@ import { personioExtractor } from './extractors/personio.extractor'
 import { fetchjobsExtractor } from './extractors/fetchjobs.extractor'
 import { stepstoneExtractor } from './extractors/stepstone.extractor'
 import { tuberlinExtractor } from './extractors/tuberlin.extractor'
+import { successfactorsExtractor } from './extractors/successfactors.extractor'
+import { taleoExtractor } from './extractors/taleo.extractor'
+import { bamboohrExtractor } from './extractors/bamboohr.extractor'
+import { smartrecruitersExtractor } from './extractors/smartrecruiters.extractor'
 import { mountShadowHost, unmountShadowHost } from './shadow-host'
 import { mountOverlay } from './overlay-mount'   // static import — no CSP-blocked dynamic chunk
 import { startFeedAnnotation, startGenericListingScan } from './feed'
+import { isApplicationFormPage, extractFormQuestions } from './application/extractor'
+import { fillField, fillCombobox } from './application/filler'
 import type { ContentMessage, RawJobData } from '../types'
 
 const detectors = [
-  linkedinDetector, indeedDetector, greenhouseDetector,
-  leverDetector, workdayDetector, personioDetector, fetchjobsDetector, tuberlinDetector,
-  stepstoneDetector, genericDetector,
+  // Specific ATS platforms — ordered before generic so they don't get swallowed
+  linkedinDetector, indeedDetector,
+  greenhouseDetector, leverDetector, workdayDetector, personioDetector,
+  fetchjobsDetector, tuberlinDetector, stepstoneDetector,
+  successfactorsDetector, taleoDetector, bamboohrDetector,
+  icimsDetector, recruiteeDetector, softgardenDetector, smartrecruitersDetector,
+  // Job boards
+  xingDetector, jobteaserDetector, absolventaDetector,
+  workwiseDetector, joinDetector, monsterDetector, jobwareDetector,
+  // Catch-all last
+  genericDetector,
 ]
 
 const extractors: Record<string, typeof genericExtractor> = {
@@ -40,6 +68,12 @@ const extractors: Record<string, typeof genericExtractor> = {
   fetchjobs: fetchjobsExtractor,
   stepstone: stepstoneExtractor,
   tuberlin: tuberlinExtractor,
+  successfactors: successfactorsExtractor,
+  taleo: taleoExtractor,
+  bamboohr: bamboohrExtractor,
+  smartrecruiters: smartrecruitersExtractor,
+  // icims, recruitee, softgarden, xing, jobteaser, absolventa,
+  // workwise, join, monster, jobware → generic extractor (JSON-LD + DOM fallback)
   generic: genericExtractor,
 }
 
@@ -57,6 +91,30 @@ if (typeof chrome === 'undefined' || !chrome.runtime) {
   function handleNavigation(): void {
     const url = location.href
 
+    // ── Application form mode ──────────────────────────────────────────────
+    if (isApplicationFormPage(url, document)) {
+      if (!overlayMounted) {
+        const shadow = mountShadowHost()
+        mountOverlay(shadow)
+        overlayMounted = true
+      }
+      // Debounce: wait briefly so dynamic ATS forms finish rendering
+      setTimeout(() => {
+        const questions = extractFormQuestions()
+        // Notify overlay immediately (local — no round-trip) so it can show
+        // the questions list while waiting for AI answers from the background.
+        window.dispatchEvent(new CustomEvent('greenapply:message', {
+          detail: { type: 'APPLICATION_LOADING', questions },
+        }))
+        if (!chrome.runtime?.id) return
+        try {
+          chrome.runtime.sendMessage({ type: 'APPLICATION_QA', questions }).catch(() => {})
+        } catch { /* orphaned context */ }
+      }, 800)
+      return
+    }
+
+    // ── Job listing mode ───────────────────────────────────────────────────
     const detector = detectors.find(d => d.isJobPage(url, document))
     if (!detector) {
       if (overlayMounted) {
@@ -79,19 +137,37 @@ if (typeof chrome === 'undefined' || !chrome.runtime) {
       overlayMounted = true
     }
 
-    if (chrome.runtime) {
-      chrome.runtime.sendMessage({ type: 'JOB_DETECTED', payload: raw }).catch(() => {})
+    if (chrome.runtime?.id) {
+      try {
+        chrome.runtime.sendMessage({ type: 'JOB_DETECTED', payload: raw }).catch(() => {})
+      } catch { /* extension reloaded — context invalidated, ignore */ }
     }
   }
 
-  // Receive match results pushed from service worker.
-  // Guard against "Extension context invalidated" when the extension is reloaded
-  // while the page is still open — the listener will simply stop working silently.
+  // Receive messages pushed from service worker, including fill commands.
   try {
-    chrome.runtime.onMessage.addListener((msg: ContentMessage) => {
+    chrome.runtime.onMessage.addListener((msg: ContentMessage & { type: string }) => {
+      if (msg.type === 'FILL_FIELD') {
+        const { selector, value, isCombobox } = msg as unknown as {
+          type: string; selector: string; value: string; isCombobox?: boolean
+        }
+        if (isCombobox) fillCombobox(selector, value)
+        else fillField(selector, value)
+        return
+      }
       window.dispatchEvent(new CustomEvent('greenapply:message', { detail: msg }))
     })
   } catch { /* extension reloaded — content script orphaned, ignore */ }
+
+  // Listen for fill-field events emitted by the overlay (runs inside shadow DOM
+  // so it uses window events to cross the shadow boundary).
+  window.addEventListener('greenapply:fill', (e: Event) => {
+    const { selector, value, isCombobox } = (e as CustomEvent<{
+      selector: string; value: string; isCombobox?: boolean
+    }>).detail
+    if (isCombobox) fillCombobox(selector, value)
+    else fillField(selector, value)
+  })
 
   startObserver(handleNavigation)
   startFeedAnnotation()

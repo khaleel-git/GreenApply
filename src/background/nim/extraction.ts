@@ -50,10 +50,10 @@ function toStringArray(input: unknown): string[] {
 export async function extractJobSignalsWithAi(text: string): Promise<Partial<AiJobExtraction>> {
   const userPrompt = [
     'Extract structured job requirements from the full job text.',
-    'Return JSON only in the format: {"requiredSkills":[],"niceToHaveSkills":[],"requiredLanguages":[{"language":"German","minLevel":"B2","required":true}],"requiredExperienceYears":null,"visa":{"value":"unknown","confidence":0.1,"evidence":[]},"employmentType":"unknown","remote":false,"salary":null,"postedDate":null}.',
+    'Return JSON only in the format: {"requiredSkills":[],"niceToHaveSkills":[],"requiredLanguages":[{"language":"<language>","minLevel":"<level>","required":true}],"requiredExperienceYears":null,"visa":{"value":"unknown","confidence":0.1,"evidence":[]},"employmentType":"unknown","remote":false,"salary":null,"postedDate":null}.',
     'requiredSkills should contain skills explicitly required by the job.',
     'niceToHaveSkills should contain skills explicitly described as optional or beneficial.',
-    'requiredLanguages should include German and English requirements when present.',
+    'requiredLanguages should only include languages that the job text explicitly lists as a skill or requirement. Do NOT add a language just because the job description is written in that language.',
     'Use one of these levels only: A1, A2, B1, B2, C1, C2, Native.',
     'If the text says a language is needed but does not specify a level, infer B2 for a standard requirement, C1 for very good / fluent / strong wording, and Native for mother tongue / native speaker wording.',
     'Set required to true only when the text clearly describes a requirement, not a nice-to-have.',

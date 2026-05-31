@@ -4,6 +4,7 @@ import { handleGetMatch } from './handlers/match.handler'
 import { handleGetProfile, handleSaveProfile } from './handlers/profile.handler'
 import { handleSaveApplication, handleUpdateStatus, handleGetApplications } from './handlers/tracker.handler'
 import { handleGenerateCoverLetter } from './handlers/generate.handler'
+import { handleApplicationQA } from './handlers/application-qa.handler'
 import { getMetrics } from './db/metrics.store'
 import { getRules, saveRule } from './db/rules.store'
 import { stripCachedSummaries } from './db/matches.store'
@@ -17,13 +18,32 @@ const LISTED_ORIGINS = [
   'linkedin.com', 'indeed.', 'glassdoor.', 'stepstone.de',
   'greenhouse.io', 'lever.co', 'myworkdayjobs.com', 'ashbyhq.com', 'personio.',
   'jobs.tu-berlin.de',
+  // ATS
+  'successfactors.com', 'successfactors.eu', 'taleo.net', 'bamboohr.com',
+  'icims.com', 'recruitee.com', 'softgarden.de', 'softgarden.io',
+  'jobs.smartrecruiters.com',
+  // German boards
+  'xing.com', 'jobteaser.com', 'absolventa.de', 'workwise.io',
+  'join.com', 'monster.de', 'monster.com', 'jobware.de',
 ]
-// URL fragments that suggest a job or job-listing page
+// URL fragments that suggest a job listing or application form page
 const JOB_URL_SIGNALS = [
   '/job/', '/jobs/', '/career/', '/careers/', '/karriere/', '/stellenangebote/',
   '/vacancy/', '/vacancies/', '/position/', '/positions/', '/opening/', '/openings/',
   '/stellenanzeige/', '/jobangebote/', '/search/', '/offre/',
   '/job-postings', '/job-posting',
+  // ATS-specific path segments
+  '/careersection/', '/requisition', '/jobdetail', '/jobad/',
+  // German-specific
+  '/stellenangebote', '/bewerbung', '/praktikum', '/praktika',
+  // Application form signals
+  '/apply', '/application', '/bewerben',
+  'smartrecruiters.com', 'lever.co/apply', 'greenhouse.io/application',
+  // Boards injected declaratively — still list here so job pages on sub-paths work
+  'successfactors.com', 'taleo.net', 'bamboohr.com', 'icims.com',
+  'recruitee.com', 'softgarden', 'xing.com/jobs', 'jobteaser.com',
+  'absolventa.de', 'workwise.io', 'join.com/companies', 'monster.de/jobs',
+  'monster.com/jobs', 'jobware.de',
 ]
 
 // Auto-inject content script on any career page the user visits
@@ -70,6 +90,9 @@ async function handleMessage(msg: BackgroundMessage, tabId?: number): Promise<un
   switch (msg.type) {
     case 'JOB_DETECTED': {
       const { jobId } = await handleJobDetected(msg.payload)
+      // Store so application-form Q&A can reference the last-seen job
+      chrome.storage.local.set({ lastJobId: jobId }).catch(() => {})
+
       const match = await handleGetMatch(jobId, tabId)  // tabId passed for async enrichment too
 
       // Send initial result immediately — don't wait for LLM explanation
@@ -80,6 +103,20 @@ async function handleMessage(msg: BackgroundMessage, tabId?: number): Promise<un
         ).catch(() => {})
       }
       return { jobId }
+    }
+
+    case 'APPLICATION_LOADING':
+      if (tabId) {
+        chrome.tabs.sendMessage(tabId, { type: 'APPLICATION_LOADING' }).catch(() => {})
+      }
+      return null
+
+    case 'APPLICATION_QA': {
+      const answers = await handleApplicationQA(msg.questions)
+      if (tabId) {
+        chrome.tabs.sendMessage(tabId, { type: 'APPLICATION_ANSWERS', answers }).catch(() => {})
+      }
+      return answers
     }
 
     case 'GET_MATCH':

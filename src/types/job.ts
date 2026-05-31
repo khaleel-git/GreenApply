@@ -9,6 +9,23 @@ export type DetectedPlatform =
   | 'ashby'
   | 'personio'
   | 'fetchjobs'
+  | 'tuberlin'
+  // ATS platforms
+  | 'successfactors'
+  | 'taleo'
+  | 'bamboohr'
+  | 'icims'
+  | 'recruitee'
+  | 'softgarden'
+  | 'smartrecruiters'
+  // German / student job boards
+  | 'xing'
+  | 'jobteaser'
+  | 'absolventa'
+  | 'workwise'
+  | 'join'
+  | 'monster'
+  | 'jobware'
   | 'generic'
 
 export interface SalaryRange {

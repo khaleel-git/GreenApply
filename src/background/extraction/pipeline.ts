@@ -1,4 +1,4 @@
-import type { ExtractionResult, RawJobData } from '../../types'
+import type { ExtractionResult, RawJobData, LanguageRequirement } from '../../types'
 import { extractFromJsonLd } from './jsonld.extractor'
 import {
   extractVisa, extractLanguages, extractEmploymentType,
@@ -62,27 +62,18 @@ export async function runExtractionPipeline(raw: RawJobData): Promise<Extraction
   // Merge: AI wins where it has data; JSON-LD and regex fill gaps.
   const requiredSkills = aiResult.requiredSkills?.length ? aiResult.requiredSkills : reqSkills
   const niceToHaveSkills = aiResult.niceToHaveSkills?.length ? aiResult.niceToHaveSkills : nthSkills
-  // Hybrid language logic:
-  // - Prefer JSON-LD when present
-  // - Else prefer regex results
-  // - Else accept AI (LLM) inference only when AI language confidence >= 0.80
-  // - Otherwise treat as no explicit language requirement (avoid false positives)
-  const aiLangs = aiResult.requiredLanguages ?? []
-  const aiLangConf = aiResult.confidence?.languages ?? 0
-  let requiredLanguages = [] as typeof aiLangs
-  let langSource: 'jsonld' | 'regex' | 'llm' | null = null
+  // Language detection: JSON-LD → regex only.
+  // LLM is intentionally excluded — it hallucinates German/English as required
+  // whenever the job description is written in that language, producing false
+  // blockers on jobs that have no explicit language requirement.
+  let requiredLanguages = [] as LanguageRequirement[]
+  let langSource: 'jsonld' | 'regex' | null = null
   if ((jsonldResult?.requiredLanguages?.length ?? 0) > 0) {
     requiredLanguages = jsonldResult!.requiredLanguages
     langSource = 'jsonld'
   } else if ((langReqs?.length ?? 0) > 0) {
     requiredLanguages = langReqs
     langSource = 'regex'
-  } else if (aiLangs.length > 0 && aiLangConf >= 0.80) {
-    requiredLanguages = aiLangs
-    langSource = 'llm'
-  } else {
-    requiredLanguages = []
-    langSource = null
   }
   // Ensure each required language object includes an `inferred` flag when
   // the source was the LLM so downstream scoring can treat inferred entries
@@ -92,7 +83,7 @@ export async function runExtractionPipeline(raw: RawJobData): Promise<Extraction
       language: (l as any).language,
       minLevel: (l as any).minLevel ?? (l as any).required ?? 'B2',
       required: (l as any).required ?? true,
-      inferred: langSource === 'llm',
+      inferred: false,
     }))
   }
   const requiredExperienceYears = typeof aiResult.requiredExperienceYears === 'number'
@@ -109,12 +100,11 @@ export async function runExtractionPipeline(raw: RawJobData): Promise<Extraction
   const remote = aiResult.remote ?? (jsonldResult?.remote ?? remoteValue)
   const salaryResult = aiResult.salary ?? (jsonldResult?.salary ?? salary)
   const postedDate = aiResult.postedDate ?? jsonldResult?.postedDate
-  // Derive extractedBy conservatively — if language came from JSON-LD/regex, prefer those.
   const extractedBy = (langSource === 'jsonld' || (jsonldResult && (requiredSkills.length === 0 && niceToHaveSkills.length === 0)))
     ? 'jsonld'
     : (langSource === 'regex' || (langSource === null && (reqSkills.length > 0 || nthSkills.length > 0)))
       ? 'regex'
-      : (langSource === 'llm' || aiResult.requiredSkills?.length || aiResult.niceToHaveSkills?.length)
+      : (aiResult.requiredSkills?.length || aiResult.niceToHaveSkills?.length)
         ? 'llm'
         : 'regex'
 
@@ -132,11 +122,9 @@ export async function runExtractionPipeline(raw: RawJobData): Promise<Extraction
     extractedBy,
     confidence: {
       skills: aiResult.requiredSkills?.length || aiResult.niceToHaveSkills?.length ? 0.92 : (reqSkills.length > 0 ? 0.80 : 0.20),
-      languages: langSource === 'llm'
-        ? (aiResult.confidence?.languages ?? 0.93)
-        : langSource === 'regex'
-          ? langConf
-          : (jsonldResult?.confidence?.languages ?? 0.15),
+      languages: langSource === 'regex'
+        ? langConf
+        : (jsonldResult?.confidence?.languages ?? 0.15),
       visa: aiResult.visa ? (aiResult.confidence?.visa ?? aiResult.visa.confidence ?? 0.92) : Math.max(jsonldResult?.confidence?.visa ?? 0, visaResult.confidence),
       salary: aiResult.salary ? (aiResult.confidence?.salary ?? 0.90) : (jsonldResult?.salary ? 0.95 : salConf),
       employmentType: aiResult.employmentType ? (aiResult.confidence?.employmentType ?? 0.90) : (jsonldResult?.confidence?.employmentType ?? empConf),

@@ -44,9 +44,28 @@ function monthToNum(m?: string): string {
   return MONTH_MAP[m.toLowerCase()] ?? '01'
 }
 
+// Section header patterns — used to isolate the work-experience block so
+// education dates (Bachelor 2015-2019, Master 2019-2022 …) are excluded.
+const EXP_SECTION_RE = /^[ \t]*(?:(?:work|professional|relevant|key|career)\s+)?(?:experience|employment|history|berufserfahrung|berufliche\s+erfahrung|arbeitserfahrung|tätigkeiten|beruflicher\s+werdegang)[ \t]*:?[ \t]*$/im
+const NON_EXP_SECTION_RE = /^[ \t]*(?:education|ausbildung|studium|akademische|qualifications?|academic|skills?|kenntnisse|languages?|sprachen|certifications?|awards?|honors?|projects?|publications?|volunteer|interests?|references?|objective|summary|profile|über mich)[ \t]*:?[ \t]*$/im
+
+// Narrow the text to the work-experience section so education date ranges
+// (e.g. Bachelor 2015-2019) are not mistaken for employment periods.
+function extractWorkExperienceSection(text: string): string {
+  const expMatch = EXP_SECTION_RE.exec(text)
+  if (!expMatch) return text  // no clear header — fall back to full text
+
+  const afterHeader = text.slice(expMatch.index + expMatch[0].length)
+  const endMatch = NON_EXP_SECTION_RE.exec(afterHeader)
+  return endMatch
+    ? text.slice(expMatch.index, expMatch.index + expMatch[0].length + endMatch.index)
+    : text.slice(expMatch.index)
+}
+
 function parseExperienceEntries(text: string): ExperienceEntry[] {
+  const section = extractWorkExperienceSection(text)
   const entries: ExperienceEntry[] = []
-  const matches = [...text.matchAll(DATE_RANGE_RE)]
+  const matches = [...section.matchAll(DATE_RANGE_RE)]
 
   for (const match of matches) {
     const [, startMonth, startYear, endMonthOrPresent, endYear] = match

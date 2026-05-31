@@ -1,4 +1,4 @@
-import { NIM_BASE_URL } from '../../constants/models'
+import { NIM_BASE_URL, NIM_MODELS } from '../../constants/models'
 
 export interface NimMessage {
   role: 'system' | 'user' | 'assistant'
@@ -92,6 +92,18 @@ export async function* nimStream(opts: NimOptions): AsyncGenerator<string> {
       } catch { /* malformed chunk, skip */ }
     }
   }
+}
+
+export async function nimEmbed(texts: string[]): Promise<number[][]> {
+  const key = await getApiKey()
+  const res = await fetch(`${NIM_BASE_URL}/embeddings`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: NIM_MODELS.embeddings, input: texts, encoding_format: 'float' }),
+  })
+  if (!res.ok) throw new Error(`NIM Embed ${res.status}: ${await res.text()}`)
+  const data = await res.json() as { data: Array<{ embedding: number[] }> }
+  return data.data.map(d => d.embedding)
 }
 
 function delay(ms: number) {

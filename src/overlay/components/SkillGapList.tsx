@@ -5,7 +5,15 @@ interface Props {
 }
 
 export function SkillGapList({ matched, missing, bonus }: Props) {
-  if (matched.length === 0 && missing.length === 0 && bonus.length === 0) return null
+  const empty = matched.length === 0 && missing.length === 0 && bonus.length === 0
+  if (empty) {
+    return (
+      <div style={{ fontSize: 12 }}>
+        <div style={{ fontWeight: 600, color: '#374151', marginBottom: 6 }}>Skills</div>
+        <div style={{ color: '#6b7280' }}>No specific skills listed in this job posting.</div>
+      </div>
+    )
+  }
   // Deduplicate skills (case-insensitive) and avoid showing the same skill
   // in multiple categories. Priority: matched > bonus > missing.
   const uniq = (arr: string[]) => {

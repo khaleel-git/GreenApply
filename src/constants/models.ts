@@ -5,6 +5,7 @@ export const NIM_MODELS = {
   jobExtractorFallback: 'meta/llama-3.1-8b-instruct',
   coverLetter: 'meta/llama-3.3-70b-instruct',
   resumeParser: 'nvidia/llama-3.3-nemotron-super-49b-v1',
+  embeddings: 'baai/bge-m3',
 } as const
 
 export const TOKEN_BUDGETS = {

@@ -7,6 +7,7 @@ export default defineManifest({
   description: 'Know before you apply. Instant job-fit scoring for international students in Germany.',
   permissions: ['storage', 'activeTab', 'scripting', 'tabs'],
   host_permissions: [
+    // Job boards — original
     'https://*.linkedin.com/*',
     'https://*.indeed.com/*',
     'https://*.glassdoor.com/*',
@@ -20,6 +21,31 @@ export default defineManifest({
     'https://jobs.ashbyhq.com/*',
     'https://*.personio.de/*',
     'https://www.jobs.tu-berlin.de/*',
+    // ATS platforms
+    'https://*.successfactors.com/*',
+    'https://*.successfactors.eu/*',
+    'https://*.taleo.net/*',
+    'https://*.bamboohr.com/*',
+    'https://*.icims.com/*',
+    'https://*.recruitee.com/*',
+    'https://*.softgarden.de/*',
+    'https://*.softgarden.io/*',
+    'https://*.smartrecruiters.com/*',
+    'https://*.greenhouse.io/*',
+    'https://*.lever.co/*',
+    'https://*.workday.com/*',
+    'https://*.ashbyhq.com/*',
+    // German & student job boards
+    'https://*.xing.com/*',
+    'https://*.jobteaser.com/*',
+    'https://*.absolventa.de/*',
+    'https://*.workwise.io/*',
+    'https://*.campusjaeger.de/*',
+    'https://*.join.com/*',
+    'https://*.monster.de/*',
+    'https://*.monster.com/*',
+    'https://*.jobware.de/*',
+    // NIM API
     'https://integrate.api.nvidia.com/*',
   ],
   optional_host_permissions: ['*://*/*'],
@@ -30,6 +56,7 @@ export default defineManifest({
   content_scripts: [
     {
       matches: [
+        // Original job boards
         'https://*.linkedin.com/*',
         'https://*.indeed.com/*',
         'https://*.glassdoor.com/*',
@@ -43,6 +70,25 @@ export default defineManifest({
         'https://jobs.ashbyhq.com/*',
         'https://*.personio.de/*',
         'https://www.jobs.tu-berlin.de/*',
+        // ATS platforms
+        'https://*.successfactors.com/*',
+        'https://*.successfactors.eu/*',
+        'https://*.taleo.net/*',
+        'https://*.bamboohr.com/*',
+        'https://*.icims.com/*',
+        'https://*.recruitee.com/*',
+        'https://*.softgarden.de/*',
+        'https://*.softgarden.io/*',
+        'https://jobs.smartrecruiters.com/*',
+        // German & student job boards
+        'https://*.xing.com/*',
+        'https://*.jobteaser.com/*',
+        'https://*.absolventa.de/*',
+        'https://*.workwise.io/*',
+        'https://*.join.com/*',
+        'https://*.monster.de/*',
+        'https://*.monster.com/*',
+        'https://*.jobware.de/*',
       ],
       js: ['src/content/index.ts'],
       run_at: 'document_idle',

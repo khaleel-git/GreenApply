@@ -1,6 +1,14 @@
 import { openDB, type IDBPDatabase } from 'idb'
 import type { UserProfile, JobListing, ExtractionResult, MatchResult, Application, CompanyProfile, UserRule } from '../../types'
 
+export interface ResumeChunkRecord {
+  id: string
+  text: string
+  section: string
+  embedding: number[]
+  createdAt: number
+}
+
 export interface GreenApplyDB {
   profile: {
     key: string
@@ -36,17 +44,32 @@ export interface GreenApplyDB {
     key: string
     value: { key: string; value: number }
   }
+  resumeChunks: {
+    key: string
+    value: ResumeChunkRecord
+  }
 }
 
 let db: IDBPDatabase<GreenApplyDB> | null = null
 
 export async function getDB(): Promise<IDBPDatabase<GreenApplyDB>> {
   if (db) return db
-  db = await openDB<GreenApplyDB>('greenapply', 3, {
+  db = await openDB<GreenApplyDB>('greenapply', 5, {
     upgrade(database, oldVersion, _newVersion, transaction) {
       // v3: language extraction now uses AI-first parsing and expanded phrasing
       // coverage, so drop cached extractions/matches to force a re-analysis.
       if (oldVersion >= 1 && oldVersion < 3) {
+        transaction.objectStore('extractions').clear()
+        transaction.objectStore('matches').clear()
+      }
+      // v4: resume vector index for cover letter generation
+      if (!database.objectStoreNames.contains('resumeChunks')) {
+        database.createObjectStore('resumeChunks', { keyPath: 'id' })
+      }
+      // v5: fixed German false-positive — bare "Deutsch" (nav switcher) was matching
+      // the language regex; LLM language inference also removed. Clear cache so all
+      // jobs re-analyse with the corrected extractor.
+      if (oldVersion >= 3 && oldVersion < 5) {
         transaction.objectStore('extractions').clear()
         transaction.objectStore('matches').clear()
       }

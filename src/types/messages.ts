@@ -3,6 +3,22 @@ import type { MatchResult } from './match'
 import type { UserProfile } from './profile'
 import type { ApplicationStatus } from './application'
 
+export interface FormQuestion {
+  id: string
+  text: string
+  type: 'textarea' | 'text' | 'select' | 'radio'
+  selector: string
+  options?: string[]
+  maxLength?: number
+  required: boolean
+}
+
+export interface ApplicationAnswer {
+  questionId: string
+  value: string
+  source: 'ai' | 'profile' | 'default'
+}
+
 export type BackgroundMessage =
   | { type: 'JOB_DETECTED'; payload: RawJobData }
   | { type: 'GET_MATCH'; jobId: string }
@@ -14,6 +30,7 @@ export type BackgroundMessage =
   | { type: 'GET_PROFILE' }
   | { type: 'UPLOAD_RESUME'; fileName: string; fileBuffer: ArrayBuffer; fileType: 'pdf' | 'docx' }
   | { type: 'GET_APPLICATIONS' }
+  | { type: 'APPLICATION_QA'; questions: FormQuestion[] }
 
 export type ContentMessage =
   | { type: 'MATCH_RESULT'; payload: MatchResult }
@@ -21,6 +38,8 @@ export type ContentMessage =
   | { type: 'MATCH_ERROR'; error: string }
   | { type: 'EXTRACTION_RESULT'; payload: ExtractionResult }
   | { type: 'GENERATION_CHUNK'; token: string; done: boolean }
+  | { type: 'APPLICATION_ANSWERS'; answers: ApplicationAnswer[] }
+  | { type: 'APPLICATION_LOADING' }
 
 export interface DashboardStats {
   jobsViewed: number

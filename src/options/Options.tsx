@@ -4,6 +4,7 @@ import { parsePdf } from '../background/parsers/pdf.parser'
 import { parseDocx } from '../background/parsers/docx.parser'
 import { parseResumeDeterministic } from '../background/parsers/resume.parser'
 import { parseTranscript } from '../background/parsers/transcript.parser'
+import { buildResumeIndex } from '../background/nim/vectorstore'
 
 type Section = 'resume' | 'academic' | 'profile' | 'languages' | 'preferences' | 'api'
 
@@ -106,7 +107,7 @@ export function Options() {
 }
 
 function ResumeSection() {
-  const [status, setStatus] = useState<'idle' | 'uploading' | 'done' | 'error'>('idle')
+  const [status, setStatus] = useState<'idle' | 'uploading' | 'indexing' | 'done' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -132,6 +133,9 @@ function ResumeSection() {
           skills: resume.skills,  // pre-populate editable skills field from resume
         },
       })
+      // Build vector index for cover letter generation (requires API key)
+      setStatus('indexing')
+      await buildResumeIndex(resume).catch(() => { /* no API key yet — index built later */ })
       setStatus('done')
     } catch (e) {
       setStatus('error')
@@ -159,7 +163,8 @@ function ResumeSection() {
         <div style={{ fontSize: 32, marginBottom: 8 }}>📄</div>
         <div style={{ fontSize: 14, fontWeight: 600, color: '#374151' }}>
           {status === 'uploading' ? 'Parsing resume…'
-            : status === 'done' ? '✓ Resume uploaded and parsed'
+            : status === 'indexing' ? 'Building cover letter index…'
+            : status === 'done' ? '✓ Resume uploaded and indexed'
             : 'Drop PDF or DOCX here, or click to browse'}
         </div>
         {status === 'idle' && (
