@@ -42,6 +42,18 @@ export default defineManifest({
       run_at: 'document_idle',
     },
   ],
+  // Make built chunks loadable by the content script when it is injected at
+  // runtime (chrome.scripting.executeScript) on company career pages. The crxjs
+  // loader does `import(chrome.runtime.getURL('assets/…'))`; that dynamic import
+  // is gated by web_accessible_resources. Without an all-origins entry the chunks
+  // are only reachable on the named job-board origins, so the overlay never
+  // mounts on a company's own career site even after the user activates it.
+  web_accessible_resources: [
+    {
+      matches: ['*://*/*'],
+      resources: ['assets/*'],
+    },
+  ],
   action: {
     default_popup: 'src/popup/index.html',
     default_icon: {
