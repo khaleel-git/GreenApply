@@ -20,9 +20,11 @@ Works on **any** career page or job listing — LinkedIn, Indeed, Glassdoor, Ste
 | UI | React 19 + TypeScript + Tailwind v4 |
 | Extension | Manifest V3 |
 | Storage | IndexedDB (`idb`) + `chrome.storage.local` |
-| AI | NVIDIA NIM APIs |
+| AI | NVIDIA NIM APIs (post-MVP only — no API key required for MVP) |
 | PDF parsing | `pdfjs-dist` |
 | DOCX parsing | `mammoth` |
+
+**MVP requires zero API key.** Resume parsing, job extraction, and scoring are all deterministic. LLM features (score explanation, cover letter) are unlocked post-MVP when users optionally provide an API key.
 
 ---
 
@@ -43,7 +45,8 @@ greenapply/
 │   │
 │   ├── types/
 │   │   ├── profile.ts                  # UserProfile, ResumeProfile, Preferences
-│   │   ├── job.ts                      # JobListing, ExtractionResult, DetectedPlatform
+│   │   ├── job.ts                      # JobListing, ExtractionResult, VisaAssessment
+│   │   ├── company.ts                  # CompanyProfile (visa likelihood, language, response rate)
 │   │   ├── match.ts                    # MatchResult, HardFilter, ScoreBreakdown
 │   │   ├── application.ts              # Application, ApplicationStatus, Timeline
 │   │   ├── rules.ts                    # UserRule, RuleCondition, RuleAction
@@ -91,6 +94,7 @@ greenapply/
 │   │       ├── idb.ts                  # Opens DB, defines stores
 │   │       ├── profile.store.ts
 │   │       ├── jobs.store.ts
+│   │       ├── companies.store.ts      # CompanyProfile keyed by normalized company name
 │   │       ├── extractions.store.ts    # Cached ExtractionResult keyed by jobId
 │   │       ├── matches.store.ts        # Keyed by jobId
 │   │       ├── applications.store.ts
@@ -162,7 +166,7 @@ greenapply/
 │   │       ├── PreferencesForm.tsx     # Job types, remote pref, salary
 │   │       ├── CompanyBlacklist.tsx    # Excluded companies list (add/remove, shown as hard filter)
 │   │       ├── RulesEditor.tsx         # Create/edit/toggle automation rules
-│   │       ├── ApiKeyForm.tsx          # NVIDIA API key (stored in chrome.storage.local)
+│   │       ├── ApiKeyForm.tsx          # NVIDIA API key — optional, unlocks AI features post-MVP
 │   │       └── LanguageSettings.tsx    # UI language: EN / DE
 │   │
 │   └── shared/
@@ -194,24 +198,58 @@ greenapply/
 
 ### ResumeProfile (`types/profile.ts`)
 
-The resume is parsed once into a rich structured profile. The LLM only touches this on upload — scoring is deterministic after that.
+**MVP: parsed entirely with regex + skill dictionary — zero API key needed.**
+
+The LLM resume parser is an optional enhancement (Phase 8, post-MVP) that improves seniority and domain detection. The core fields needed for scoring (skills, languages, experience years) are extracted deterministically.
 
 ```typescript
+interface ExperienceEntry {
+  title: string
+  company: string
+  startDate: string                   // ISO "YYYY-MM" — required for interval merging
+  endDate: string | 'present'
+  bullets: string[]
+}
+
 interface ResumeProfile {
   raw: string                         // full extracted text
   fileName: string
   fileType: 'pdf' | 'docx'
   uploadedAt: number
-  skills: string[]                    // e.g. ['Python', 'Docker', 'React']
-  industries: string[]                // e.g. ['SaaS', 'FinTech']
-  seniority: 'student' | 'junior' | 'mid' | 'senior' | 'lead'
-  totalExperienceYears: number
-  domains: string[]                   // e.g. ['Backend', 'Data Engineering']
+  parsedBy: 'deterministic' | 'llm'  // track which parser was used
+  skills: string[]                    // regex + dictionary match against SKILLS_DICT
+  industries: string[]                // dictionary match against INDUSTRIES_DICT
+  seniority: 'student' | 'junior' | 'mid' | 'senior' | 'lead'  // inferred from merged years + keywords
+  totalExperienceYears: number        // merged intervals — NOT naive sum (see note below)
+  domains: string[]
   education: EducationEntry[]
-  experience: ExperienceEntry[]
-  languages: LanguageEntry[]          // [{ language: 'German', level: 'B2' }]
+  experience: ExperienceEntry[]       // raw entries — used for merging, stored separately from derived years
+  languages: LanguageEntry[]          // regex: "German B2", "Deutsch C1", "native English"
   certifications: string[]
 }
+```
+
+**Date range merging is required.** Naive summation of experience entries produces wildly wrong values when entries overlap (freelance + internship + working student all running concurrently). Always merge intervals before summing:
+
+```typescript
+// background/parsers/resume.parser.ts
+function computeMergedExperienceYears(entries: ExperienceEntry[]): number {
+  const intervals = entries
+    .map(e => ({ start: parseYearMonth(e.startDate), end: e.endDate === 'present' ? Date.now() : parseYearMonth(e.endDate) }))
+    .filter(i => i.start && i.end)
+    .sort((a, b) => a.start - b.start)
+
+  let merged = 0
+  let cursor = 0
+  for (const { start, end } of intervals) {
+    if (start > cursor) { merged += end - start; cursor = end }
+    else if (end > cursor) { merged += end - cursor; cursor = end }
+  }
+  return merged / (365.25 * 24 * 60 * 60 * 1000)
+}
+```
+
+Without merging, a student with a 1-year freelance + 3-month internship + 6-month working student (all overlapping) incorrectly shows 1.75 years instead of 1.0 year.
 
 interface UserProfile {
   id: string
@@ -240,31 +278,45 @@ interface UserPreferences {
 
 ### ExtractionResult (`types/job.ts`)
 
-Extraction is a separate step from the raw scrape, cached independently so revisiting a job never re-calls the LLM.
+Extraction is a separate step from the raw scrape, cached independently so revisiting a job never re-calls anything.
 
 ```typescript
+interface VisaAssessment {
+  value: true | false | 'unknown'
+  confidence: number                  // 0.0–1.0
+  evidence: string[]                  // ["We do not sponsor visas", "EU citizen required"]
+}
+
 interface ExtractionResult {
   jobId: string
   requiredSkills: string[]
   niceToHaveSkills: string[]
   requiredLanguages: LanguageRequirement[]
-  visaSponsorship: boolean | 'unknown'
+  requiredExperienceYears?: number    // extracted from "5+ years", "minimum 3 years experience"
+  visa: VisaAssessment                // richer than boolean — carries evidence text
   employmentType: string
   remote: boolean | 'hybrid'
-  salary?: SalaryRange
+  salary?: SalaryRange                // extracted salary — used in scoring + display
   postedDate?: string                 // ISO date string — shown as "Posted 3 days ago"
   extractedBy: 'jsonld' | 'regex' | 'dict' | 'llm'
   confidence: {
     skills: number                    // 0.0–1.0
     languages: number
     visa: number
+    salary: number
     employmentType: number
+    experienceYears: number
   }
   extractedAt: number
 }
 ```
 
-Low-confidence fields show a caveat in the overlay (e.g., "Visa policy: unknown — low confidence").
+Low-confidence fields show a caveat in the overlay:
+```
+Visa sponsorship: Unknown
+Evidence: none found
+⚠ Could not determine — verify on job page
+```
 
 ### JobListing (`types/job.ts`)
 
@@ -282,13 +334,34 @@ interface JobListing {
 }
 ```
 
+### CompanyProfile (`types/company.ts`)
+
+Seeded from public data (GitHub, LinkedIn, Crunchbase) and enriched over time by community signals from GreenApply users.
+
+```typescript
+interface CompanyProfile {
+  normalizedName: string              // lowercase, stripped punctuation — used as key
+  displayName: string
+  size?: 'startup' | 'smb' | 'mid' | 'enterprise'
+  industry?: string
+  techStack?: string[]
+  sponsorshipLikelihood: number       // 0.0–1.0 — seeded from public data, refined by community reports
+  englishFriendlyScore: number        // 0.0–1.0 — does team primarily communicate in English?
+  averageResponseDays?: number        // community-reported time to first response
+  communityReports: number            // how many GreenApply users have data on this company
+  lastUpdated: number
+}
+```
+
+Community signals are opt-in: when a user marks an application as "rejected" or "offer", GreenApply anonymously aggregates the data per company. No PII. This becomes the basis for "Company Intelligence" in Pro.
+
 ### MatchResult (`types/match.ts`)
 
 ```typescript
 interface HardFilter {
-  type: 'language_gap' | 'visa_blocked' | 'employment_type_mismatch' | 'location_blocked'
+  type: 'language_gap' | 'visa_blocked' | 'employment_type_mismatch' | 'location_blocked' | 'excluded_company' | 'experience_gap'
   message: string                     // "German C1 required — your level is A2"
-  severity: 'blocker' | 'warning'    // blocker = immediate red regardless of score
+  severity: 'blocker' | 'warning'
 }
 
 interface MatchResult {
@@ -304,14 +377,16 @@ interface MatchResult {
     location: number
     employmentType: number
     visaCompatibility: number
+    salaryMatch: number               // 0 if salary unknown, positive if above min pref, negative if below
   }
+  freshnessModifier: number           // applied on top of base score
   skillGap: {
     matched: string[]
     missing: string[]
     bonus: string[]
     languageGaps: LanguageGap[]
   }
-  summary: string                     // LLM-generated explanation of the deterministic score
+  summary?: string                    // LLM-generated — only if API key is configured
   computedAt: number
 }
 ```
@@ -420,13 +495,52 @@ Options ──► sendMessage ──► background (save profile, upload resume)
 {
   "manifest_version": 3,
   "permissions": ["storage", "activeTab", "scripting", "tabs"],
+  "host_permissions": [
+    "https://*.linkedin.com/*",
+    "https://*.indeed.com/*",
+    "https://*.glassdoor.com/*",
+    "https://*.glassdoor.de/*",
+    "https://*.stepstone.de/*",
+    "https://boards.greenhouse.io/*",
+    "https://jobs.lever.co/*",
+    "https://*.myworkdayjobs.com/*",
+    "https://jobs.ashbyhq.com/*",
+    "https://*.personio.de/*"
+  ],
   "optional_host_permissions": ["*://*/*"],
-  "content_scripts": [{ "matches": ["<all_urls>"], "js": ["src/content/index.ts"], "run_at": "document_idle" }],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.linkedin.com/*",
+        "https://*.indeed.com/*",
+        "https://*.glassdoor.com/*",
+        "https://*.glassdoor.de/*",
+        "https://*.stepstone.de/*",
+        "https://boards.greenhouse.io/*",
+        "https://jobs.lever.co/*",
+        "https://*.myworkdayjobs.com/*",
+        "https://jobs.ashbyhq.com/*",
+        "https://*.personio.de/*"
+      ],
+      "js": ["src/content/index.ts"],
+      "run_at": "document_idle"
+    }
+  ],
   "background": { "service_worker": "src/background/index.ts", "type": "module" }
 }
 ```
 
-`optional_host_permissions` instead of `host_permissions` — Chrome Web Store reviewers flag broad `*://*/*` in required permissions. Declaring it optional and requesting at runtime avoids rejection.
+**Chrome Store strategy:** Declare named platform domains in both `host_permissions` and `content_scripts.matches` — reviewers accept specific domains with no friction. Do not use `<all_urls>` in content_scripts; this is a known rejection trigger. For unrecognized career sites, use the declarativeNetRequest API or inject via `chrome.scripting.executeScript()` after requesting the origin permission at runtime:
+
+```typescript
+// User clicks the extension popup on an unrecognized career page
+chrome.permissions.request({ origins: [`${location.origin}/*`] }, (granted) => {
+  if (!granted) return
+  chrome.scripting.executeScript({ target: { tabId }, files: ['content/index.js'] })
+})
+```
+
+This covers 100% of sites while keeping the initial submission reviewer-friendly.
 
 ---
 
@@ -489,6 +603,20 @@ const HARD_FILTERS: HardFilterRule[] = [
         return { severity: 'blocker', message: `${job.company} is on your excluded companies list` }
       }
     }
+  },
+  {
+    type: 'experience_gap',
+    check: (extraction, profile) => {
+      const required = extraction.requiredExperienceYears  // extracted from "5+ years", "minimum 3 years"
+      if (!required) return
+      const candidate = profile.totalExperienceYears
+      if (candidate < required * 0.5) {
+        return { severity: 'blocker', message: `${required}+ years required — you have ${candidate.toFixed(1)} years` }
+      }
+      if (candidate < required * 0.75) {
+        return { severity: 'warning', message: `${required}+ years preferred — you have ${candidate.toFixed(1)} years` }
+      }
+    }
   }
 ]
 ```
@@ -497,7 +625,15 @@ const HARD_FILTERS: HardFilterRule[] = [
 
 ```typescript
 // scoring/engine.ts
-const WEIGHTS = { skills: 0.35, experience: 0.25, language: 0.20, location: 0.10, employmentType: 0.05, visaCompatibility: 0.05 }
+const WEIGHTS = {
+  skills: 0.30,
+  experience: 0.22,
+  language: 0.20,
+  location: 0.10,
+  visaCompatibility: 0.08,
+  salaryMatch: 0.05,
+  employmentType: 0.05,
+}
 
 export function computeScore(job: JobListing, extraction: ExtractionResult, profile: ResumeProfile, prefs: UserPreferences): ScoreBreakdown {
   const skills      = scoreSkills(extraction.requiredSkills, extraction.niceToHaveSkills, profile.skills)
@@ -505,21 +641,33 @@ export function computeScore(job: JobListing, extraction: ExtractionResult, prof
   const language    = scoreLanguage(extraction.requiredLanguages, profile.languages)
   const location    = scoreLocation(extraction, prefs)
   const employType  = scoreEmploymentType(extraction.employmentType, prefs.jobTypes)
-  const visa        = scoreVisa(extraction.visaSponsorship, profile.workAuth)
+  const visa        = scoreVisa(extraction.visa, profile.workAuth)
+  const salary      = scoreSalary(extraction.salary, prefs.minSalaryEur)  // 0 if unknown, boost if above min
 
   const base = Math.round(
-    skills * WEIGHTS.skills +
-    experience * WEIGHTS.experience +
-    language * WEIGHTS.language +
-    location * WEIGHTS.location +
-    employType * WEIGHTS.employmentType +
-    visa * WEIGHTS.visaCompatibility
+    skills      * WEIGHTS.skills +
+    experience  * WEIGHTS.experience +
+    language    * WEIGHTS.language +
+    location    * WEIGHTS.location +
+    visa        * WEIGHTS.visaCompatibility +
+    salary      * WEIGHTS.salaryMatch +
+    employType  * WEIGHTS.employmentType
   )
 
   const freshnessModifier = computeFreshnessModifier(extraction.postedDate)
   const total = Math.min(100, Math.max(0, base + freshnessModifier))
 
-  return { total, base, freshnessModifier, skills, experience, language, location, employmentType: employType, visaCompatibility: visa }
+  return { total, base, freshnessModifier, skills, experience, language, location, employmentType: employType, visaCompatibility: visa, salaryMatch: salary }
+}
+
+// Salary scoring — neutral if unknown, boost if above user minimum, penalty if below
+function scoreSalary(salary?: SalaryRange, minEur?: number): number {
+  if (!salary || !minEur) return 50   // neutral when either is unknown
+  const annualSalary = salary.period === 'month' ? salary.min! * 12 : salary.min!
+  if (annualSalary >= minEur * 1.2)   return 100  // 20%+ above minimum
+  if (annualSalary >= minEur)          return 75   // meets minimum
+  if (annualSalary >= minEur * 0.85)  return 40   // slightly below
+  return 0                                         // significantly below minimum
 }
 ```
 
@@ -577,11 +725,23 @@ This ensures the score is always consistent — LLM randomness only affects the 
 ### Job fingerprinting
 
 ```typescript
-// Identify duplicate postings across different URLs
-const jobId = sha256(`${company.toLowerCase()}|${title.toLowerCase()}|${location.toLowerCase()}`)
+// Normalize title before hashing — strip gender suffixes and seniority modifiers
+// that companies add inconsistently across reposts
+function normalizeTitle(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/\s*\(m\/?f\/?d\)|\(w\/?m\/?d\)|\(d\/?f\/?m\)|\(all genders\)/gi, '')
+    .replace(/\b(senior|junior|lead|principal|staff|associate|intern)\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+const jobId = sha256(
+  `${company.toLowerCase().trim()}|${normalizeTitle(title)}|${location.toLowerCase().trim()}`
+)
 ```
 
-If a fingerprint already exists in IndexedDB, mark `isDuplicate: true` and show a warning badge in the overlay. Companies regularly repost the same job with a new URL.
+If a fingerprint already exists in IndexedDB, mark `isDuplicate: true` and show a warning badge in the overlay. Without normalization, "Backend Engineer" and "Backend Engineer (m/f/d)" hash to different IDs — missing the duplicate entirely.
 
 ### Named-platform extractors (accuracy improvements)
 
@@ -654,6 +814,16 @@ const EMPLOYMENT_PATTERNS = [
   /\b(Freelance|Freiberuflich|Contract)\b/i,
   /\b(Thesis|Bachelor.?arbeit|Master.?arbeit|Abschlussarbeit)\b/i,
 ]
+
+// Experience requirements
+const EXPERIENCE_PATTERNS = [
+  /(\d+)\+?\s*years?\s*(of\s*)?(professional\s*)?(experience|Erfahrung)/i,
+  /minimum\s*(\d+)\s*years?/i,
+  /at\s*least\s*(\d+)\s*years?/i,
+  /(\d+)[–-](\d+)\s*years?\s*(of\s*)?(experience|Erfahrung)/i,  // captures "3-5 years" → min=3
+  /mindestens\s*(\d+)\s*Jahr/i,
+]
+// Extract: match[1] → requiredExperienceYears (use min of range for "3-5 years")
 ```
 
 ### Confidence scoring (`extraction/confidence.ts`)
@@ -735,11 +905,13 @@ Track in IndexedDB `metrics` store:
 interface UsageMetrics {
   jobsViewed: number
   jobsAnalyzed: number
+  jobsSkipped: number                // jobs that received 🔴 recommendation
   jobsSaved: number
   applicationsSubmitted: number
   rejections: number
   interviews: number
   offers: number
+  timeSavedMinutes: number           // jobsSkipped × 15 — shown as "Estimated time saved: 49.5 hrs"
   // Derived
   interviewRate: number              // interviews / applicationsSubmitted
   offerRate: number                  // offers / interviews
@@ -762,7 +934,14 @@ Visa sponsorship unavailable: 25%
 Missing: Kubernetes (18 jobs)
 ```
 
-Show in popup Dashboard. Foundation for the "Why You Keep Getting Rejected" post-MVP coaching feature.
+Show in popup Dashboard. `timeSavedMinutes` is incremented by 15 each time a job receives 🔴 — continuously reinforcing the product's core value. Dashboard headline:
+
+```
+Jobs analyzed: 432    Jobs skipped: 198
+Estimated time saved: 49.5 hours
+```
+
+Foundation for the "Why You Keep Getting Rejected" post-MVP coaching feature.
 
 ---
 
@@ -789,38 +968,53 @@ Hard filter blockers force 🔴 Red regardless of score.
 
 **Done when:** extension loads, popup opens, options page opens.
 
-### Phase 2 — Resume Upload + Profile (Days 4–6)
-- Options page: `ResumeUpload.tsx`, `ProfileForm.tsx`, `PreferencesForm.tsx`, `ApiKeyForm.tsx`
-- `background/parsers/pdf.parser.ts` + `docx.parser.ts`
-- `background/handlers/profile.handler.ts` + `db/profile.store.ts`
-- LLM call: parse resume text into full `ResumeProfile` (skills, seniority, experience years, domains, certifications, languages)
+### Phase 2 — Extraction Quality (Days 4–8)
 
-**Done when:** user uploads resume PDF/DOCX and sees the structured profile (skills list, experience years, seniority level) in options page.
+**Extraction must be reliable before scoring can exist.** Bad extraction = bad score. Build and test first.
 
-### Phase 3 — Job Detection + Extraction (Days 7–10)
 - `content/observer.ts` (history patch + MutationObserver)
 - `generic.extractor.ts` (DOM scraper) — JSON-LD → microdata → heuristic text block
 - `generic.detector.ts` — URL + DOM heuristic
-- `extraction/pipeline.ts` — JSON-LD fields → regex patterns (languages, visa, employment type) → skill dictionary → LLM fallback
-- `extraction/confidence.ts` — per-field confidence scores; low-confidence fields get LLM verification
-- `extractions.store.ts` — cache ExtractionResult by jobId; revisiting skips extraction entirely
-- Job fingerprinting: `sha256(company + title + location)` for duplicate detection
-- Wire `JOB_DETECTED` message: content → background → extraction pipeline → IndexedDB
-- LinkedIn DOM extractor as first named-platform override
+- `extraction/pipeline.ts` — JSON-LD → regex → skill dictionary (no LLM in MVP)
+- `extraction/jsonld.extractor.ts`, `regex.extractor.ts`, `dict.extractor.ts`, `confidence.ts`
+- `constants/patterns.ts` — all language, visa, work auth, employment type, experience years patterns
+- Job fingerprinting with title normalization (`normalizeTitle()`)
+- `extractions.store.ts` — cache ExtractionResult by jobId
+- LinkedIn + Greenhouse + Lever DOM extractors (named-platform overrides)
 
-**Done when:** overlay detects job pages on LinkedIn and any site with JSON-LD `JobPosting`; structured fields (skills, languages, visa, employment type) extracted and cached with confidence scores.
+**Extraction quality gate (do not move to Phase 3 until passing):**
+- Test on 100 real job pages across 5+ platforms
+- Language detection accuracy: >90%
+- Visa/sponsorship detection accuracy: >85% — and **false positive rate <5%** (incorrectly saying "no sponsorship" is worse than saying "unknown" — destroys trust)
+- Employment type detection accuracy: >90%
+- Experience years extraction accuracy: >80%
+- Duplicate detection: correctly collapses "Backend Engineer" and "Backend Engineer (m/f/d)"
 
-### Phase 4 — Hard Filters + Match Scoring + Overlay (Days 11–15)
-- `scoring/hard-filters.ts` — language gap, visa blocked, employment type mismatch
-- `scoring/engine.ts` — deterministic 0–100 calculator
-- `nim/explainer.ts` — LLM writes the 2–3 sentence summary of the score
+**Done when:** extraction passes the quality gate.
+
+### Phase 3 — Resume Upload + Profile (Days 9–11)
+
+**MVP: fully deterministic, zero API key.**
+
+- Options page: `ResumeUpload.tsx`, `ProfileForm.tsx`, `PreferencesForm.tsx`, `LanguageSettings.tsx`
+- `background/parsers/pdf.parser.ts` + `docx.parser.ts`
+- Deterministic `ResumeProfile` parser: regex date ranges → `totalExperienceYears`, regex language levels, skill dictionary match → `skills[]`, keyword-based `seniority` inference
+- `background/handlers/profile.handler.ts` + `db/profile.store.ts`
+
+**Done when:** user uploads resume PDF/DOCX and sees skills list, experience years, and detected language levels — with no API key required.
+
+### Phase 4 — Hard Filters + Match Scoring + Overlay (Days 12–16)
+- `scoring/hard-filters.ts` — language gap, visa blocked, location, employment type, excluded company
+- `scoring/engine.ts` — deterministic 0–100 with salary match + freshness modifier
+- `scoring/freshness.ts` — age-based score modifier
 - `background/handlers/match.handler.ts`
 - `content/shadow-host.ts` (closed shadow DOM + `adoptedStyleSheets`)
-- `overlay/Overlay.tsx`, `ScoreRing.tsx`, `RecommendationBadge.tsx`, `HardFilterAlert.tsx`, `SkillGapList.tsx`
+- `overlay/Overlay.tsx`, `ScoreRing.tsx`, `RecommendationBadge.tsx`, `HardFilterAlert.tsx`, `SkillGapList.tsx`, `JobFreshness.tsx`, `ConfidenceCaveat.tsx`
+- `summary` field is `undefined` until user configures API key (overlay shows deterministic breakdown only)
 
-**Done when:** floating overlay appears on any job page with consistent deterministic score + hard filter warning cards (e.g., "German C1 required — your level is A2").
+**Done when:** floating overlay appears on any job page with consistent score, hard filter cards, salary match, and freshness warning — no API key required.
 
-### Phase 5 — Application Tracker + Metrics (Days 16–19)
+### Phase 5 — Application Tracker + Metrics (Days 17–20)
 - `db/applications.store.ts` + `tracker.handler.ts`
 - `overlay/components/TrackingDropdown.tsx`
 - `popup/components/Dashboard.tsx`, `JobsList.tsx`, `ApplicationCard.tsx`
@@ -830,27 +1024,28 @@ Hard filter blockers force 🔴 Red regardless of score.
 
 **Done when:** saved jobs appear in popup with status badges; rejection patterns visible in dashboard.
 
-### Phase 6 — Feed Filtering + Rule Engine (Days 20–23)
+### Phase 6 — Feed Filtering + Rule Engine (Days 21–24)
 - `content/feed.ts` — inject score badges (🟢🔴 + score) directly into job list cards on LinkedIn, Indeed, etc.
 - `rules/engine.ts` + `rules/defaults.ts` — evaluate UserRules against MatchResult
 - `db/rules.store.ts` + `background/handlers/rules.handler.ts`
 - `options/components/RulesEditor.tsx` — create/toggle automation rules
 - `overlay/components/RulesBadge.tsx` — shows triggered rule name in overlay
-- Default rules auto-created based on user profile (e.g., `needs_sponsorship` → auto-skip no-sponsor jobs)
+- Default rules auto-created from user profile (e.g., `needs_sponsorship` → auto-skip no-sponsor jobs)
 
 **Done when:** job list on LinkedIn shows 🟢/🔴 badges inline; auto-skip rule silently marks matching jobs red without opening them.
 
-### Phase 7 — Cover Letter + Polish (Days 24–28)
-- `nim/generator.ts` with SSE streaming
-- `background/handlers/generate.handler.ts` via `chrome.runtime.connect()` port
-- `overlay/components/GeneratePanel.tsx` (streaming text output + copy button)
-- Tune named-platform extractors (Indeed, Glassdoor, StepStone, Workday, Personio)
+### Phase 7 — Polish + AI Features (Days 25–30)
 - German UI strings (EN/DE toggle)
-- Error states: no API key, no resume, extraction failed, NIM timeout
+- Error states: no resume, extraction failed, API key invalid, NIM timeout
 - Retry logic in `nim/client.ts` (exponential backoff, max 2 retries)
+- Tune named-platform extractors (Indeed, Glassdoor, StepStone, Workday, Personio)
 - Icons + Chrome Web Store metadata
+- **Optional AI features (unlocked when API key configured):**
+  - `nim/explainer.ts` — LLM score explanation
+  - `nim/generator.ts` — streaming cover letter via `chrome.runtime.connect()` port
+  - `overlay/components/GeneratePanel.tsx` — streaming text output + copy button
 
-**Done when:** MVP is submission-ready. Cover letter is a bonus, not a blocker.
+**Done when:** MVP is submission-ready. AI features work when key is provided; core value works without it.
 
 ---
 
@@ -876,42 +1071,46 @@ Wait for `[data-automation-id="jobPostingDescription"]` via MutationObserver. Ti
 JSON-LD fallback first (Personio pages include `JobPosting` schema). If absent, fall back to largest `<section>` heuristic.
 
 ### Chrome Web Store approval
-`optional_host_permissions` instead of `host_permissions` for `*://*/*`. Request permission at runtime when user first visits a job page. Avoids reviewer flags on broad host access.
+Declare named platform domains in `host_permissions` (reviewers accept specific domains readily). Add `*://*/*` only in `optional_host_permissions`. On unrecognized career sites, request `${location.origin}/*` at runtime via `chrome.permissions.request()`. Users approve once; no reviewer friction.
 
 ---
 
 ## MVP Scope
 
+**MVP requires zero API key. Install → upload resume → start analyzing jobs.**
+
 The five core features that must be excellent before anything else ships:
 
-1. **Job detection** — any career page, any URL
-2. **Heuristic extraction** — languages, visa, skills, employment type, freshness
-3. **Hard filters** — language gap, visa blocked, location, company blacklist, work auth
-4. **Deterministic match score** — 0–100 with dimension breakdown, freshness modifier
+1. **Job extraction** — heuristic-first pipeline, tested on 100+ real jobs before Phase 3 begins
+2. **Hard filters** — language gap, visa/work auth, location, company blacklist — the reason people install the extension
+3. **Deterministic match score** — 0–100 with salary match + freshness modifier, always consistent
+4. **Resume profile** — parsed deterministically from PDF/DOCX, no AI required
 5. **Application tracker** — with rejection tracking and pattern summary
 
 **Also in MVP:**
-- Resume upload (PDF + DOCX) with full structured `ResumeProfile` extraction
-- Job fingerprinting (duplicate detection across reposts)
-- 🟢🟡🟠🔴 recommendation driven by deterministic engine + hard filters
-- LLM score explanation (2–3 sentences, cached per job)
-- Confidence caveats ("Visa policy: unknown — low confidence")
-- Feed filtering — score badges in job list cards on LinkedIn / Indeed
+- Job detection on any career page, any URL
+- Job fingerprinting with title normalization (deduplication across reposts)
+- 🟢🟡🟠🔴 recommendation driven by hard filters + deterministic engine
+- Confidence caveats with evidence text ("No sponsorship — evidence: 'We do not sponsor visas'")
+- Feed filtering — score badges in LinkedIn / Indeed job list cards
 - Rule engine — auto-skip, auto-save, highlight based on user-defined conditions
-- Usage metrics (views, analyses, saved, applied, rejected, interviews, offers)
-- Rejection pattern summary (foundation for coaching feature)
+- `CompanyProfile` schema (seeded, community-enriched post-MVP)
+- Usage metrics + rejection pattern summary
 - English + German UI language support
 
+**Unlocked when API key is optionally configured:**
+- LLM score explanation (2–3 sentences)
+- Cover letter generator (streaming)
+
 **Out (post-MVP):**
-- Cover letter generator (added in Phase 7 as bonus, not core)
 - Resume tailoring
 - Q&A answer generation
 - Auto apply
 - Multi-resume profiles
-- Interview coach
+- Interview coach / outcome prediction (Pro)
 - Referral finder
 - Salary negotiation assistant
-- GreenApply API proxy (moves NVIDIA key off the client, enables subscription)
+- GreenApply API proxy (moves NVIDIA key off client, enables subscription)
 - University / team licensing
 - Multi-platform cloud sync
 
@@ -978,4 +1177,47 @@ Users open LinkedIn or Indeed. GreenApply marks every job card in the list view 
 🔴 No Sponsorship — ML Engineer, SAP
 ```
 
-People stop browsing job boards and start browsing through GreenApply scores. Highly retentive. Phase 6 is a foundation for this — expand it post-MVP to more platforms and faster batch scoring.
+People stop browsing job boards and start browsing through GreenApply scores. Highly retentive. Phase 6 is the foundation — expand post-MVP to more platforms and batch scoring.
+
+### Job Outcome Prediction (Pro)
+
+Rule-based, not AI-generated. Derived from community data in `CompanyProfile`.
+
+```
+Match: 82%
+Sponsorship: Available ✓
+German: English-first team ✓
+Skills: 90% match ✓
+
+Estimated interview probability: 68%
+Based on: 23 GreenApply users at this company
+```
+
+People care more about "Will I hear back?" than "Match score = 82." This becomes the hook that drives Pro conversion.
+
+### The Core UI Moment
+
+These two screens are the product. Everything else serves them.
+
+```
+🔴 Skip
+
+German C1 required — your level is A2
+No sponsorship available
+
+Time saved: ~20 minutes
+```
+
+```
+🟢 Strong Apply
+
+English-speaking team
+Sponsorship available
+Skills: 9/11 matched
+Score: 87/100
+
+[Save Job]  [Track Application]
+```
+
+If these two screens are fast, accurate, and trustworthy — the extension has a reason to exist.
+Engineering effort should be weighted toward extraction quality and hard filter accuracy above all else.
