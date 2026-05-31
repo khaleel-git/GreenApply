@@ -33,8 +33,8 @@ export function Popup() {
   const [alreadyGranted, setAlreadyGranted] = useState(false)
 
   useEffect(() => {
-    chrome.runtime.sendMessage({ type: 'GET_DASHBOARD_STATS' }).then(setMetrics)
-    chrome.runtime.sendMessage({ type: 'GET_APPLICATIONS' }).then(setApplications)
+    chrome.runtime.sendMessage({ type: 'GET_DASHBOARD_STATS' }).then(setMetrics).catch(() => {})
+    chrome.runtime.sendMessage({ type: 'GET_APPLICATIONS' }).then(setApplications).catch(() => {})
     chrome.tabs.query({ active: true, currentWindow: true }).then(async tabs => {
       const tab = tabs[0]
       if (!tab) return
@@ -146,7 +146,7 @@ export function Popup() {
       }}>
         <span>v0.1.0</span>
         <button
-          onClick={() => chrome.runtime.openOptionsPage()}
+          onClick={() => { try { chrome.runtime.openOptionsPage() } catch { } }}
           style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 11, color: '#16a34a' }}
         >
           Settings →

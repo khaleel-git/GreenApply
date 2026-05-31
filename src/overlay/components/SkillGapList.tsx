@@ -6,18 +6,33 @@ interface Props {
 
 export function SkillGapList({ matched, missing, bonus }: Props) {
   if (matched.length === 0 && missing.length === 0 && bonus.length === 0) return null
+  // Deduplicate skills (case-insensitive) and avoid showing the same skill
+  // in multiple categories. Priority: matched > bonus > missing.
+  const uniq = (arr: string[]) => {
+    const seen = new Set<string>()
+    const out: string[] = []
+    for (const s of arr) {
+      const key = s.trim().toLowerCase()
+      if (!seen.has(key)) { seen.add(key); out.push(s) }
+    }
+    return out
+  }
+
+  const matchedUnique = uniq(matched)
+  const bonusUnique = uniq(bonus).filter(b => !matchedUnique.some(m => m.trim().toLowerCase() === b.trim().toLowerCase()))
+  const missingUnique = uniq(missing).filter(m => !matchedUnique.some(mm => mm.trim().toLowerCase() === m.trim().toLowerCase()) && !bonusUnique.some(b => b.trim().toLowerCase() === m.trim().toLowerCase()))
 
   return (
     <div style={{ fontSize: 12 }}>
       <div style={{ fontWeight: 600, color: '#374151', marginBottom: 6 }}>Skills</div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-        {matched.map(s => <Chip key={s} label={s} color="#16a34a" bg="#f0fdf4" />)}
-        {bonus.map(s => <Chip key={s} label={s} color="#2563eb" bg="#eff6ff" />)}
-        {missing.map(s => <Chip key={s} label={s} color="#dc2626" bg="#fef2f2" icon="✗" />)}
+        {matchedUnique.map(s => <Chip key={s} label={s} color="#16a34a" bg="#f0fdf4" />)}
+        {bonusUnique.map(s => <Chip key={s} label={s} color="#2563eb" bg="#eff6ff" />)}
+        {missingUnique.map(s => <Chip key={s} label={s} color="#dc2626" bg="#fef2f2" icon="✗" />)}
       </div>
-      {missing.length > 0 && (
+      {missingUnique.length > 0 && (
         <div style={{ color: '#6b7280', marginTop: 6, fontSize: 11 }}>
-          {missing.length} required skill{missing.length > 1 ? 's' : ''} missing
+          {missingUnique.length} required skill{missingUnique.length > 1 ? 's' : ''} missing
         </div>
       )}
     </div>

@@ -100,29 +100,115 @@ export function Overlay() {
   )
 }
 
-type LanguageGap = { language: string; required: string; actual: string | null; met: boolean }
+type LanguageStatus = {
+  language: string
+  required: string
+  actual: string | null
+  met: boolean
+  requiredByJob: boolean
+}
 
-function LanguageRequirements({ gaps }: { gaps: LanguageGap[] }) {
+function renderLanguageIcon(language: string) {
+  if (language === 'German') return '🇩🇪'
+  if (language === 'English') return '🇬🇧'
+  if (language === 'French') return '🇫🇷'
+  return '🌐'
+}
+
+function MatchSummary({ match, extraction }: { match: MatchResult; extraction?: ExtractionResult }) {
+  const languageMap = new Map(match.skillGap.languageGaps.map(g => [g.language.toLowerCase(), g]))
+  const detectedBy = extraction ? extraction.extractedBy : null
+  const langConfPct = extraction ? Math.round((extraction.confidence?.languages ?? 0) * 100) : null
+  const extractionLangs = extraction?.requiredLanguages ?? null
+  const extractionHasLanguages = Boolean(extraction && (extraction.requiredLanguages?.length ?? 0) > 0)
+  const extractionLangMap = new Map((extraction?.requiredLanguages ?? []).map((l: any) => [l.language.toLowerCase(), l]))
+  const targetLanguages: Array<'German' | 'English'> = ['German', 'English']
+
   return (
-    <div style={{ fontSize: 12 }}>
-      <div style={{ fontWeight: 600, color: '#374151', marginBottom: 6 }}>Language Requirements</div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        {gaps.map(g => (
-          <div key={g.language} style={{
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            padding: '4px 8px', borderRadius: 6,
-            background: g.met ? '#f0fdf4' : '#fef2f2',
-            border: `1px solid ${g.met ? '#bbf7d0' : '#fecaca'}`,
-          }}>
-            <span style={{ color: '#374151' }}>
-              {g.language === 'German' ? '🇩🇪' : g.language === 'English' ? '🇬🇧' : g.language === 'French' ? '🇫🇷' : '🌐'}
-              {' '}{g.language} {g.required}
-            </span>
-            <span style={{ fontWeight: 600, color: g.met ? '#16a34a' : '#dc2626', fontSize: 11 }}>
-              {g.actual ? `${g.actual} ${g.met ? '✓' : '✗'}` : 'not set'}
-            </span>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 12 }}>
+      <div>
+        <div style={{ fontWeight: 600, color: '#374151', marginBottom: 6 }}>Matched Skills</div>
+        {match.skillGap.matched.length > 0 ? (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+            {match.skillGap.matched.map(skill => (
+              <span
+                key={skill}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  padding: '2px 8px', borderRadius: 999,
+                  background: '#f0fdf4', color: '#16a34a',
+                  border: '1px solid #bbf7d0', fontSize: 11,
+                }}
+              >
+                ✓ {skill}
+              </span>
+            ))}
           </div>
-        ))}
+        ) : (
+          <div style={{ color: '#6b7280' }}>No clear skill matches detected.</div>
+        )}
+      </div>
+      {detectedBy && (
+        <div style={{ fontSize: 11, color: '#6b7280', marginTop: 6 }}>
+          Detected by: <strong style={{ color: '#374151' }}>{detectedBy === 'llm' ? 'AI (LLM)' : detectedBy}</strong>
+          {langConfPct !== null && ` · confidence ${langConfPct}%`}
+          {detectedBy === 'llm' && languageMap.size > 0 && (
+            <span style={{ marginLeft: 8, color: '#9ca3af' }}>(levels may be inferred)</span>
+          )}
+        </div>
+      )}
+
+      <div>
+        <div style={{ fontWeight: 600, color: '#374151', marginBottom: 6 }}>Language Status</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {targetLanguages.map(language => {
+            const gap = languageMap.get(language.toLowerCase())
+            const ex = extractionLangMap.get(language.toLowerCase())
+            // If an extraction object exists, prefer it. If extraction exists and
+            // contains no requiredLanguages, treat language requirement as not detected.
+            const hasSignal = extraction
+              ? extractionHasLanguages ? Boolean(ex) : false
+              : Boolean(gap)
+            const met = extraction
+              ? (ex ? !!ex.required : false)
+              : (gap?.met ?? false)
+            const requiredLevel = extraction
+              ? (ex ? (ex.minLevel ?? 'unknown') : 'not detected')
+              : (gap?.required ?? 'not detected')
+            const actualLevel = extraction ? (ex ? (ex.actual ?? 'not set') : 'not set') : (gap?.actual ?? 'not set')
+            return (
+              <div
+                key={language}
+                style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '4px 8px', borderRadius: 6,
+                  background: hasSignal ? (met ? '#f0fdf4' : '#fef2f2') : '#f9fafb',
+                  border: `1px solid ${hasSignal ? (met ? '#bbf7d0' : '#fecaca') : '#e5e7eb'}`,
+                }}
+              >
+                <span style={{ color: '#374151', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span>{renderLanguageIcon(language)} {language}</span>
+                  <span style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.4,
+                    color: hasSignal ? (gap?.requiredByJob ? '#166534' : '#92400e') : '#6b7280',
+                    background: hasSignal ? (gap?.requiredByJob ? '#dcfce7' : '#fef3c7') : '#f3f4f6',
+                    border: `1px solid ${hasSignal ? (gap?.requiredByJob ? '#86efac' : '#fcd34d') : '#d1d5db'}`,
+                    borderRadius: 999,
+                    padding: '1px 6px',
+                  }}>
+                    {hasSignal ? (gap?.requiredByJob ? 'Required' : 'Optional') : 'Not detected'}
+                  </span>
+                </span>
+                <span style={{ fontWeight: 600, color: hasSignal ? (met ? '#16a34a' : '#dc2626') : '#6b7280', fontSize: 11 }}>
+                  {hasSignal ? `${actualLevel} / ${requiredLevel} ${met ? '✓' : '✗'}` : '—'}
+                </span>
+              </div>
+            )
+          })}
+        </div>
       </div>
     </div>
   )
@@ -159,6 +245,7 @@ function ResultState({
   saved: boolean
   onSaved: () => void
 }) {
+  const [showDebug, setShowDebug] = useState(false)
   const blockers = match.hardFilters.filter(f => f.severity === 'blocker')
   const warnings = match.hardFilters.filter(f => f.severity === 'warning')
 
@@ -176,19 +263,15 @@ function ResultState({
       {/* Hard filter blockers */}
       {blockers.length > 0 && <HardFilterAlert filters={blockers} />}
 
-      {/* Language requirements — always shown when detected, met or not */}
-      {match.skillGap.languageGaps.length > 0 && (
-        <LanguageRequirements gaps={match.skillGap.languageGaps} />
-      )}
+      {/* Language requirements — always shown in the compact summary */}
+      <MatchSummary match={match} extraction={extraction} />
 
       {/* Skill gap */}
-      {(match.skillGap.matched.length > 0 || match.skillGap.missing.length > 0) && (
-        <SkillGapList
-          matched={match.skillGap.matched}
-          missing={match.skillGap.missing}
-          bonus={match.skillGap.bonus}
-        />
-      )}
+      <SkillGapList
+        matched={match.skillGap.matched}
+        missing={match.skillGap.missing}
+        bonus={match.skillGap.bonus}
+      />
 
       {/* Warnings (non-language) */}
       {warnings.filter(f => f.type !== 'language_gap').length > 0 && (
@@ -223,6 +306,18 @@ function ResultState({
       {match.recommendation !== 'red' && (
         <GeneratePanel jobId={match.jobId} />
       )}
+
+      {/* Debug: raw extraction/match — hidden by default */}
+      <div style={{ marginTop: 8 }}>
+        <button onClick={() => setShowDebug(s => !s)} style={{ fontSize: 11, border: 'none', background: 'none', color: '#6b7280', cursor: 'pointer' }}>
+          {showDebug ? 'Hide debug' : 'Show debug'}
+        </button>
+        {showDebug && (
+          <pre style={{ maxHeight: 220, overflow: 'auto', background: '#f9fafb', padding: 8, borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 11 }}>
+            {JSON.stringify({ extraction, match }, null, 2)}
+          </pre>
+        )}
+      </div>
     </>
   )
 }

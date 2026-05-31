@@ -151,6 +151,7 @@ Indeed, Greenhouse, Lever, Workday, Personio, StepStone — all wired into conte
 - LLM explanation fires async in background; when done, pushes updated MatchResult to the tab (overlay re-renders with summary text)
 - Cover letter streams token-by-token through a long-lived `chrome.runtime.connect()` port
 - If no API key: score + hard filters still work; explanation and cover letter are hidden
+- Extraction is now AI-first for testing: the full job text goes to NIM first, then JSON-LD / regex / dictionary fall back for missing fields.
 
 ---
 
@@ -185,6 +186,7 @@ Indeed, Glassdoor, StepStone, Workday, Personio, Greenhouse, Lever, Ashby.
 - **Shadow DOM overlay:** Closed shadow root prevents page CSS from leaking in. Tailwind styles injected via `adoptedStyleSheets` — CSP-safe.
 - **Chrome Store strategy:** Named platform domains in `content_scripts.matches`, `*://*/*` only in `optional_host_permissions`. Generic career sites request origin permission at runtime.
 - **Date range merging:** `computeMergedExperienceYears()` unions overlapping intervals — critical for accurate seniority inference on student profiles.
+- **Feature updates:** When adding or changing a feature, update `memory.md` with the new behavior or convention.
 
 ---
 

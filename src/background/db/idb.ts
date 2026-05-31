@@ -42,11 +42,11 @@ let db: IDBPDatabase<GreenApplyDB> | null = null
 
 export async function getDB(): Promise<IDBPDatabase<GreenApplyDB>> {
   if (db) return db
-  db = await openDB<GreenApplyDB>('greenapply', 2, {
+  db = await openDB<GreenApplyDB>('greenapply', 3, {
     upgrade(database, oldVersion, _newVersion, transaction) {
-      // v2: language extraction improved — drop cached extractions/matches so
-      // previously-visited jobs are re-analysed with the new detection.
-      if (oldVersion >= 1 && oldVersion < 2) {
+      // v3: language extraction now uses AI-first parsing and expanded phrasing
+      // coverage, so drop cached extractions/matches to force a re-analysis.
+      if (oldVersion >= 1 && oldVersion < 3) {
         transaction.objectStore('extractions').clear()
         transaction.objectStore('matches').clear()
       }

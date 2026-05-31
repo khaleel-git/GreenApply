@@ -4,7 +4,7 @@
 // match is what lets us catch "Good German skills (at least B2 …)" — where the
 // level does not sit immediately after the language name.
 export const LANGUAGE_DEFS: { canonical: string; rx: RegExp }[] = [
-  { canonical: 'German',  rx: /\b(?:German|Deutsch(?:kenntnisse|sprachkenntnisse)?)\b/gi },
+  { canonical: 'German',  rx: /\b(?:German|Deutsch(?:kenntnisse|sprachkenntnisse)?|deutsch(?:e[nrsm]?|en|er|es)?(?:\s+Sprache|\s+Sprachkenntnisse|\s+Kenntnisse)?|deutschen\s+Sprache|deutsche\s+Sprache)\b/gi },
   { canonical: 'English', rx: /\b(?:English|Englisch(?:kenntnisse)?)\b/gi },
   { canonical: 'French',  rx: /\b(?:French|Französisch|Franzoesisch)\b/gi },
   { canonical: 'Spanish', rx: /\b(?:Spanish|Spanisch)\b/gi },
@@ -15,7 +15,9 @@ export const CEFR_LEVEL_RE = /\b(C2|C1|B2|B1|A2|A1)\b/i
 export const NATIVE_LEVEL_RE = /\b(native|mother\s*tongue|Muttersprach(?:e|ler(?:in)?)?)\b/i
 export const FLUENT_LEVEL_RE = /\b(fluent|fließend|fliessend|verhandlungssicher|business[-\s]?fluent|proficient|proficiency|excellent\s+command)\b/i
 // A requirement is present even without an explicit level (defaults to B2).
-export const LANG_REQUIRED_CTX_RE = /\b(required|requirement|mandatory|erforderlich|Voraussetzung|necessary|notwendig|essential|vorausgesetzt|zwingend|good\s+(?:command|knowledge)|sehr\s+gute|gute\s+Kenntnisse|in\s+German|in\s+Deutsch|auf\s+Deutsch|working\s+language|Arbeitssprache)\b/i
+export const LANG_REQUIRED_CTX_RE = /\b(required|requirement|mandatory|erforderlich|Voraussetzung|necessary|notwendig|essential|vorausgesetzt|zwingend|very\s+good|good\s+(?:command|knowledge|skills)|sehr\s+gute|sehr\s+sichere|sichere\s+Kenntnis(?:se)?|gute\s+Kenntnisse|in\s+German|in\s+Deutsch|auf\s+Deutsch|working\s+language|Arbeitssprache)\b/i
+// Strong language-competency phrasing, especially for bilingual requirements.
+export const LANG_COMMUNICATION_CTX_RE = /\b(schriftlich|mündlich|muedlich|kommunizier(?:en|st|t|en|st)|kommunikation|verstehen|sprechen|writing|spoken|communicate(?:s|d|ing)?|correspond(?:ence|ing)?|communicating)\b/i
 // Marks a language as nice-to-have rather than a hard requirement.
 export const LANG_OPTIONAL_CTX_RE = /\b(nice\s+to\s+have|of\s+advantage|an\s+advantage|a\s+plus|von\s+Vorteil|wünschenswert|wuenschenswert|optional|bonus|preferred|ideally|idealerweise)\b/i
 
@@ -67,5 +69,6 @@ export const JOB_URL_PATTERNS = [
   '/vacancies/', '/vacancy/', '/position/', '/positions/', '/offres/', '/offre/',
   '/hiring/', '/work-with-us/', '/join-us/', '/opening/', '/openings/',
   '/stellenanzeige/', '/jobangebote/',
+  '/job-description/', '/job-description-deg/', '/job-description-eng/',
   '/job-postings', '/job-posting',   // TU Berlin & similar portals
 ]

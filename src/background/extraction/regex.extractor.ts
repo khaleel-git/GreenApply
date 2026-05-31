@@ -6,6 +6,7 @@ import {
   NATIVE_LEVEL_RE,
   FLUENT_LEVEL_RE,
   LANG_REQUIRED_CTX_RE,
+  LANG_COMMUNICATION_CTX_RE,
   LANG_OPTIONAL_CTX_RE,
   EMPLOYMENT_PATTERNS,
   EXPERIENCE_PATTERNS,
@@ -32,6 +33,14 @@ export function extractVisa(text: string): VisaAssessment {
 export function extractLanguages(text: string): { reqs: LanguageRequirement[]; confidence: number } {
   const byLang = new Map<string, LanguageRequirement>()
 
+  function inferLevel(ctxWindow: string): string | null {
+    if (NATIVE_LEVEL_RE.test(ctxWindow)) return 'Native'
+    if (FLUENT_LEVEL_RE.test(ctxWindow)) return 'C1'
+    if (LANG_COMMUNICATION_CTX_RE.test(ctxWindow) && LANG_REQUIRED_CTX_RE.test(ctxWindow)) return 'B2'
+    if (LANG_REQUIRED_CTX_RE.test(ctxWindow)) return 'B2'
+    return null
+  }
+
   for (const { canonical, rx } of LANGUAGE_DEFS) {
     rx.lastIndex = 0
     let m: RegExpExecArray | null
@@ -53,9 +62,7 @@ export function extractLanguages(text: string): { reqs: LanguageRequirement[]; c
       const cefrBefore = beforeCefr.match(CEFR_LEVEL_RE)
       if (cefrAfter) level = cefrAfter[1].toUpperCase()
       else if (cefrBefore) level = cefrBefore[1].toUpperCase()
-      else if (NATIVE_LEVEL_RE.test(ctxWindow)) level = 'Native'
-      else if (FLUENT_LEVEL_RE.test(ctxWindow)) level = 'C1'
-      else if (LANG_REQUIRED_CTX_RE.test(ctxWindow)) level = 'B2'  // required, level unspecified
+  else level = inferLevel(ctxWindow)
 
       if (!level) continue  // bare mention, no requirement signal → skip
 

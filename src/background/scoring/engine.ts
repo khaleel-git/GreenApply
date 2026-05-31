@@ -67,7 +67,13 @@ function languageScore(required: ExtractionResult['requiredLanguages'], language
   for (const req of required) {
     const userLang = languages.find(l => l.language.toLowerCase() === req.language.toLowerCase())
     const met = userLang ? (CEFR_INDEX[userLang.level] ?? 0) >= (CEFR_INDEX[req.minLevel] ?? 0) : false
-    gaps.push({ language: req.language, required: req.minLevel, actual: userLang?.level ?? null, met })
+    gaps.push({
+      language: req.language,
+      required: req.minLevel,
+      actual: userLang?.level ?? null,
+      met,
+      requiredByJob: req.required,
+    })
     if (!met && req.required) totalPenalty += 40
   }
 

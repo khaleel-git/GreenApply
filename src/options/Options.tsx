@@ -15,6 +15,7 @@ const EMPTY_PROFILE: UserProfile = {
   preferences: {
     jobTypes: ['full-time'], remotePreference: 'any', minSalaryEur: undefined,
     excludedCompanies: [], targetRoles: [], targetIndustries: [], uiLanguage: 'en',
+    treatInferredLanguagesAsHardFilter: true,
   },
   languages: [], skills: [], createdAt: 0, updatedAt: 0,
 }
@@ -27,14 +28,20 @@ export function Options() {
   useEffect(() => {
     chrome.runtime.sendMessage({ type: 'GET_PROFILE' }).then(p => {
       if (p) setProfile({ ...EMPTY_PROFILE, ...(p as UserProfile) })
-    })
+    }).catch(() => {})
   }, [])
 
   async function saveProfile(updates: Partial<UserProfile>) {
-    await chrome.runtime.sendMessage({ type: 'SAVE_PROFILE', profile: updates })
-    setProfile(prev => ({ ...prev, ...updates }))
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    try {
+      await chrome.runtime.sendMessage({ type: 'SAVE_PROFILE', profile: updates })
+      setProfile(prev => ({ ...prev, ...updates }))
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } catch (e) {
+      // extension may be reloading or unavailable — avoid uncaught rejection
+      // eslint-disable-next-line no-console
+      console.warn('Failed to save profile via runtime.sendMessage', e)
+    }
   }
 
   const nav: { id: Section; label: string }[] = [
@@ -309,6 +316,7 @@ function PreferencesSection({ profile, onSave }: { profile: UserProfile; onSave:
   const [remote, setRemote] = useState(prefs.remotePreference)
   const [minSalary, setMinSalary] = useState(prefs.minSalaryEur?.toString() ?? '')
   const [excluded, setExcluded] = useState(prefs.excludedCompanies.join(', '))
+  const [treatInferred, setTreatInferred] = useState<boolean>(prefs.treatInferredLanguagesAsHardFilter ?? true)
 
   const jobTypeOptions = [
     { id: 'full-time', label: 'Full-time' },
@@ -358,6 +366,13 @@ function PreferencesSection({ profile, onSave }: { profile: UserProfile; onSave:
         <input value={excluded} onChange={e => setExcluded(e.target.value)} placeholder="Amazon, Uber" style={inputStyle} />
       </Field>
 
+      <Field label="Inferred language requirements">
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <input type="checkbox" checked={treatInferred} onChange={e => setTreatInferred(e.target.checked)} />
+          <div style={{ fontSize: 13 }}>Treat AI-inferred language requirements as hard filters</div>
+        </label>
+      </Field>
+
       <button onClick={() => onSave({
         preferences: {
           ...prefs,
@@ -365,6 +380,7 @@ function PreferencesSection({ profile, onSave }: { profile: UserProfile; onSave:
           remotePreference: remote,
           minSalaryEur: minSalary ? parseInt(minSalary, 10) : undefined,
           excludedCompanies: excluded.split(',').map(s => s.trim()).filter(Boolean),
+          treatInferredLanguagesAsHardFilter: treatInferred,
         },
       })} style={primaryBtn}>
         Save Preferences

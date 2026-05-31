@@ -8,6 +8,7 @@ export type DetectedPlatform =
   | 'workday'
   | 'ashby'
   | 'personio'
+  | 'fetchjobs'
   | 'generic'
 
 export interface SalaryRange {
@@ -20,6 +21,7 @@ export interface SalaryRange {
 export interface LanguageRequirement {
   language: string
   minLevel: string       // 'B2', 'C1', 'Native'
+  inferred?: boolean
   required: boolean
 }
 

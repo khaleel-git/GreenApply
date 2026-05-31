@@ -72,6 +72,9 @@ export interface UserPreferences {
   targetRoles: string[]
   targetIndustries: string[]
   uiLanguage: 'en' | 'de'
+  // If true, language requirements produced by inference (AI) are treated as
+  // hard filters. If false, inferred languages are considered informational only.
+  treatInferredLanguagesAsHardFilter?: boolean
 }
 
 export interface UserProfile {

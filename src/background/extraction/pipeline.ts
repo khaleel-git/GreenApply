@@ -6,6 +6,7 @@ import {
 } from './regex.extractor'
 import { extractSkills } from './dict.extractor'
 import { assessConfidence } from './confidence'
+import { extractJobSignalsWithAi } from '../nim/extraction'
 
 function mergeWithDefaults(base: Partial<ExtractionResult>, jobId: string): ExtractionResult {
   return {
@@ -35,76 +36,117 @@ function mergeWithDefaults(base: Partial<ExtractionResult>, jobId: string): Extr
 export async function runExtractionPipeline(raw: RawJobData): Promise<ExtractionResult> {
   const { description, url } = raw
   const jobId = raw.url  // Fingerprint assigned by job.handler before calling pipeline
+  const jobText = [raw.title, description].filter(Boolean).join('\n')
 
-  // Step 1: JSON-LD (free, instant, highest quality)
+  // Step 1: AI-first structured extraction
+  const aiResult = await extractJobSignalsWithAi(jobText)
+
+  // Step 2: JSON-LD (free, instant, highest quality)
   const jsonldResult = extractFromJsonLd(description, jobId)
 
-  // Step 2: Regex extraction (free, instant)
+  // Step 3: Regex extraction (free, instant)
   // Employment type: prepend the job title so "Student assistant" / "Werkstudent"
   // in the title is detected even when the body text doesn't repeat it. Many ATS
   // systems (Taleo, Oracle) hardcode FULL_TIME in JSON-LD regardless of actual type.
   const empText = [raw.title, description].filter(Boolean).join('\n')
   const visaResult = extractVisa(description)
-  const { reqs: langReqs, confidence: langConf } = extractLanguages([raw.title, description].filter(Boolean).join('\n'))
+  const { reqs: langReqs, confidence: langConf } = extractLanguages(jobText)
   const { type: empType, confidence: empConf } = extractEmploymentType(empText)
   const { years: expYears, confidence: expConf } = extractExperienceYears(description)
   const { value: remoteValue } = extractRemote(description)
   const { salary, confidence: salConf } = extractSalary(description)
 
-  // Step 3: Dictionary matching for skills
+  // Step 4: Dictionary matching for skills
   const { required: reqSkills, niceToHave: nthSkills } = extractSkills(description)
 
-  // Merge: JSON-LD wins where it has high confidence; regex fills gaps
+  // Merge: AI wins where it has data; JSON-LD and regex fill gaps.
+  const requiredSkills = aiResult.requiredSkills?.length ? aiResult.requiredSkills : reqSkills
+  const niceToHaveSkills = aiResult.niceToHaveSkills?.length ? aiResult.niceToHaveSkills : nthSkills
+  // Hybrid language logic:
+  // - Prefer JSON-LD when present
+  // - Else prefer regex results
+  // - Else accept AI (LLM) inference only when AI language confidence >= 0.80
+  // - Otherwise treat as no explicit language requirement (avoid false positives)
+  const aiLangs = aiResult.requiredLanguages ?? []
+  const aiLangConf = aiResult.confidence?.languages ?? 0
+  let requiredLanguages = [] as typeof aiLangs
+  let langSource: 'jsonld' | 'regex' | 'llm' | null = null
+  if ((jsonldResult?.requiredLanguages?.length ?? 0) > 0) {
+    requiredLanguages = jsonldResult!.requiredLanguages
+    langSource = 'jsonld'
+  } else if ((langReqs?.length ?? 0) > 0) {
+    requiredLanguages = langReqs
+    langSource = 'regex'
+  } else if (aiLangs.length > 0 && aiLangConf >= 0.80) {
+    requiredLanguages = aiLangs
+    langSource = 'llm'
+  } else {
+    requiredLanguages = []
+    langSource = null
+  }
+  // Ensure each required language object includes an `inferred` flag when
+  // the source was the LLM so downstream scoring can treat inferred entries
+  // differently according to user preferences.
+  if (requiredLanguages.length > 0) {
+    requiredLanguages = requiredLanguages.map(l => ({
+      language: (l as any).language,
+      minLevel: (l as any).minLevel ?? (l as any).required ?? 'B2',
+      required: (l as any).required ?? true,
+      inferred: langSource === 'llm',
+    }))
+  }
+  const requiredExperienceYears = typeof aiResult.requiredExperienceYears === 'number'
+    ? aiResult.requiredExperienceYears
+    : expYears
+  const visa = aiResult.visa ?? (jsonldResult?.visa?.confidence ?? 0 > visaResult.confidence ? jsonldResult!.visa! : visaResult)
+  // Prefer a high-confidence regex detection (title/body) for employment type
+  // (e.g., "Werkstudent" / "Working Student") since some ATS JSON-LD fields
+  // incorrectly default to FULL_TIME. AI output may also be noisy for type, so
+  // only use it when regex didn't find a confident match.
+  const employmentType = empConf > 0.5
+    ? empType
+    : (aiResult.employmentType ?? (jsonldResult?.employmentType ?? empType))
+  const remote = aiResult.remote ?? (jsonldResult?.remote ?? remoteValue)
+  const salaryResult = aiResult.salary ?? (jsonldResult?.salary ?? salary)
+  const postedDate = aiResult.postedDate ?? jsonldResult?.postedDate
+  // Derive extractedBy conservatively — if language came from JSON-LD/regex, prefer those.
+  const extractedBy = (langSource === 'jsonld' || (jsonldResult && (requiredSkills.length === 0 && niceToHaveSkills.length === 0)))
+    ? 'jsonld'
+    : (langSource === 'regex' || (langSource === null && (reqSkills.length > 0 || nthSkills.length > 0)))
+      ? 'regex'
+      : (langSource === 'llm' || aiResult.requiredSkills?.length || aiResult.niceToHaveSkills?.length)
+        ? 'llm'
+        : 'regex'
+
   const base: Partial<ExtractionResult> = {
     jobId,
-    requiredSkills: reqSkills,
-    niceToHaveSkills: nthSkills,
-    requiredLanguages: (jsonldResult?.requiredLanguages?.length ?? 0) > 0
-      ? jsonldResult!.requiredLanguages
-      : langReqs,
-    requiredExperienceYears: expYears,
-    visa: jsonldResult?.visa?.confidence ?? 0 > visaResult.confidence
-      ? jsonldResult!.visa!
-      : visaResult,
-    // Regex wins when it found a specific type (conf > 0.5) — many ATS systems
-    // (Taleo/Oracle) hardcode FULL_TIME in JSON-LD even for student/intern roles.
-    employmentType: empConf > 0.5 ? empType : (jsonldResult?.employmentType ?? empType),
-    remote: jsonldResult?.remote ?? remoteValue,
-    salary: jsonldResult?.salary ?? salary,
-    postedDate: jsonldResult?.postedDate,
-    extractedBy: jsonldResult ? 'jsonld' : 'regex',
+    requiredSkills,
+    niceToHaveSkills,
+    requiredLanguages,
+    requiredExperienceYears,
+    visa,
+    employmentType,
+    remote,
+    salary: salaryResult,
+    postedDate,
+    extractedBy,
     confidence: {
-      skills: reqSkills.length > 0 ? 0.80 : 0.20,
-      languages: langReqs.length > 0 ? langConf : (jsonldResult?.confidence?.languages ?? 0.15),
-      visa: Math.max(jsonldResult?.confidence?.visa ?? 0, visaResult.confidence),
-      salary: jsonldResult?.salary ? 0.95 : salConf,
-      employmentType: jsonldResult?.confidence?.employmentType ?? empConf,
-      experienceYears: expConf,
+      skills: aiResult.requiredSkills?.length || aiResult.niceToHaveSkills?.length ? 0.92 : (reqSkills.length > 0 ? 0.80 : 0.20),
+      languages: langSource === 'llm'
+        ? (aiResult.confidence?.languages ?? 0.93)
+        : langSource === 'regex'
+          ? langConf
+          : (jsonldResult?.confidence?.languages ?? 0.15),
+      visa: aiResult.visa ? (aiResult.confidence?.visa ?? aiResult.visa.confidence ?? 0.92) : Math.max(jsonldResult?.confidence?.visa ?? 0, visaResult.confidence),
+      salary: aiResult.salary ? (aiResult.confidence?.salary ?? 0.90) : (jsonldResult?.salary ? 0.95 : salConf),
+      employmentType: aiResult.employmentType ? (aiResult.confidence?.employmentType ?? 0.90) : (jsonldResult?.confidence?.employmentType ?? empConf),
+      experienceYears: aiResult.requiredExperienceYears ? (aiResult.confidence?.experienceYears ?? 0.90) : expConf,
     },
     extractedAt: Date.now(),
   }
 
   const result = mergeWithDefaults(base, jobId)
-  const { overallConfident } = assessConfidence(result.confidence)
-
-  // Step 4: LLM fallback — only if API key available AND confidence is low
-  // (LLM fallback is skipped in MVP — marked as optional post-MVP)
-  if (!overallConfident) {
-    const apiKey = await getStoredApiKey()
-    if (apiKey) {
-      // LLM fallback will be wired in Phase 7 when nim/extractor.ts is implemented
-      // For now, return what we have with low confidence marked
-    }
-  }
+  assessConfidence(result.confidence)
 
   return result
-}
-
-async function getStoredApiKey(): Promise<string | null> {
-  try {
-    const result = await chrome.storage.local.get('nvidiaApiKey')
-    return result.nvidiaApiKey ?? null
-  } catch {
-    return null
-  }
 }

@@ -6,6 +6,7 @@ import { greenhouseDetector } from './detectors/greenhouse.detector'
 import { leverDetector } from './detectors/lever.detector'
 import { workdayDetector } from './detectors/workday.detector'
 import { personioDetector } from './detectors/personio.detector'
+import { fetchjobsDetector } from './detectors/fetchjobs.detector'
 import { stepstoneDetector } from './detectors/stepstone.detector'
 import { tuberlinDetector } from './detectors/tuberlin.detector'
 import { genericExtractor } from './extractors/generic.extractor'
@@ -15,6 +16,7 @@ import { greenhouseExtractor } from './extractors/greenhouse.extractor'
 import { leverExtractor } from './extractors/lever.extractor'
 import { workdayExtractor } from './extractors/workday.extractor'
 import { personioExtractor } from './extractors/personio.extractor'
+import { fetchjobsExtractor } from './extractors/fetchjobs.extractor'
 import { stepstoneExtractor } from './extractors/stepstone.extractor'
 import { tuberlinExtractor } from './extractors/tuberlin.extractor'
 import { mountShadowHost, unmountShadowHost } from './shadow-host'
@@ -24,7 +26,7 @@ import type { ContentMessage, RawJobData } from '../types'
 
 const detectors = [
   linkedinDetector, indeedDetector, greenhouseDetector,
-  leverDetector, workdayDetector, personioDetector, tuberlinDetector,
+  leverDetector, workdayDetector, personioDetector, fetchjobsDetector, tuberlinDetector,
   stepstoneDetector, genericDetector,
 ]
 
@@ -35,6 +37,7 @@ const extractors: Record<string, typeof genericExtractor> = {
   lever: leverExtractor,
   workday: workdayExtractor,
   personio: personioExtractor,
+  fetchjobs: fetchjobsExtractor,
   stepstone: stepstoneExtractor,
   tuberlin: tuberlinExtractor,
   generic: genericExtractor,
@@ -44,50 +47,53 @@ const extractors: Record<string, typeof genericExtractor> = {
 // chrome.runtime is undefined. Bail out immediately in that case.
 if (typeof chrome === 'undefined' || !chrome.runtime) {
   // Not an extension context (e.g. sandboxed iframe) — do nothing.
-  throw new Error('GreenApply: no extension context, skipping')
-}
+  // Avoid throwing so the page doesn't surface an error to the console.
+  // Some pages (or reloads) may inject content scripts where chrome is unavailable.
+  // eslint-disable-next-line no-console
+  console.warn('GreenApply: no extension context, content script exiting.')
+} else {
+  let overlayMounted = false
 
-let overlayMounted = false
+  function handleNavigation(): void {
+    const url = location.href
 
-function handleNavigation(): void {
-  const url = location.href
-
-  const detector = detectors.find(d => d.isJobPage(url, document))
-  if (!detector) {
-    if (overlayMounted) {
-      unmountShadowHost()
-      overlayMounted = false
+    const detector = detectors.find(d => d.isJobPage(url, document))
+    if (!detector) {
+      if (overlayMounted) {
+        unmountShadowHost()
+        overlayMounted = false
+      }
+      return
     }
-    return
+
+    const platformExtractor = extractors[detector.platform]
+    const raw: RawJobData | null =
+      (platformExtractor && platformExtractor !== genericExtractor
+        ? platformExtractor.extract(document, url) ?? genericExtractor.extract(document, url)
+        : genericExtractor.extract(document, url))
+    if (!raw) return
+
+    if (!overlayMounted) {
+      const shadow = mountShadowHost()
+      mountOverlay(shadow)
+      overlayMounted = true
+    }
+
+    if (chrome.runtime) {
+      chrome.runtime.sendMessage({ type: 'JOB_DETECTED', payload: raw }).catch(() => {})
+    }
   }
 
-  const platformExtractor = extractors[detector.platform]
-  const raw: RawJobData | null =
-    (platformExtractor && platformExtractor !== genericExtractor
-      ? platformExtractor.extract(document, url) ?? genericExtractor.extract(document, url)
-      : genericExtractor.extract(document, url))
-  if (!raw) return
+  // Receive match results pushed from service worker.
+  // Guard against "Extension context invalidated" when the extension is reloaded
+  // while the page is still open — the listener will simply stop working silently.
+  try {
+    chrome.runtime.onMessage.addListener((msg: ContentMessage) => {
+      window.dispatchEvent(new CustomEvent('greenapply:message', { detail: msg }))
+    })
+  } catch { /* extension reloaded — content script orphaned, ignore */ }
 
-  if (!overlayMounted) {
-    const shadow = mountShadowHost()
-    mountOverlay(shadow)
-    overlayMounted = true
-  }
-
-  if (chrome.runtime) {
-    chrome.runtime.sendMessage({ type: 'JOB_DETECTED', payload: raw }).catch(() => {})
-  }
+  startObserver(handleNavigation)
+  startFeedAnnotation()
+  startGenericListingScan()
 }
-
-// Receive match results pushed from service worker.
-// Guard against "Extension context invalidated" when the extension is reloaded
-// while the page is still open — the listener will simply stop working silently.
-try {
-  chrome.runtime.onMessage.addListener((msg: ContentMessage) => {
-    window.dispatchEvent(new CustomEvent('greenapply:message', { detail: msg }))
-  })
-} catch { /* extension reloaded — content script orphaned, ignore */ }
-
-startObserver(handleNavigation)
-startFeedAnnotation()
-startGenericListingScan()

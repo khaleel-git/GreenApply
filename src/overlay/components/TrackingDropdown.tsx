@@ -29,7 +29,7 @@ export function TrackingDropdown({ jobId }: Props) {
         const app = list?.find(a => a.jobId === jobId)
         if (app) { setApplicationId(app.id); setStatus(app.status) }
       },
-    )
+    ).catch(() => {})
   }, [jobId])
 
   async function handleStatusChange(newStatus: ApplicationStatus) {

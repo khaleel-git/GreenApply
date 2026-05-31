@@ -19,6 +19,9 @@ export function runHardFilters(
   // Language gap
   for (const req of extraction.requiredLanguages) {
     if (!req.required) continue
+    // If this requirement was inferred by AI and the user prefers not to treat
+    // inferred languages as hard filters, skip adding the filter.
+    if (req.inferred && profile.preferences.treatInferredLanguagesAsHardFilter === false) continue
     const userLang = profile.languages.find(
       l => l.language.toLowerCase() === req.language.toLowerCase(),
     )

@@ -3,6 +3,7 @@ export interface LanguageGap {
   required: string
   actual: string | null
   met: boolean
+  requiredByJob: boolean
 }
 
 export interface HardFilter {
