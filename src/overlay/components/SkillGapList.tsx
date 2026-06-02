@@ -1,3 +1,5 @@
+import { useTheme } from '../../shared/ThemeContext'
+
 interface Props {
   matched: string[]
   missing: string[]
@@ -5,12 +7,13 @@ interface Props {
 }
 
 export function SkillGapList({ matched, missing, bonus }: Props) {
+  const { colors } = useTheme()
   const empty = matched.length === 0 && missing.length === 0 && bonus.length === 0
   if (empty) {
     return (
       <div style={{ fontSize: 12 }}>
-        <div style={{ fontWeight: 600, color: '#374151', marginBottom: 6 }}>Skills</div>
-        <div style={{ color: '#6b7280' }}>No specific skills listed in this job posting.</div>
+        <div style={{ fontWeight: 600, color: colors.textSecondary, marginBottom: 6 }}>Skills</div>
+        <div style={{ color: colors.textMuted }}>No specific skills listed in this job posting.</div>
       </div>
     )
   }
@@ -32,14 +35,14 @@ export function SkillGapList({ matched, missing, bonus }: Props) {
 
   return (
     <div style={{ fontSize: 12 }}>
-      <div style={{ fontWeight: 600, color: '#374151', marginBottom: 6 }}>Skills</div>
+      <div style={{ fontWeight: 600, color: colors.textSecondary, marginBottom: 6 }}>Skills</div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
         {matchedUnique.map(s => <Chip key={s} label={s} color="#16a34a" bg="#f0fdf4" />)}
         {bonusUnique.map(s => <Chip key={s} label={s} color="#2563eb" bg="#eff6ff" />)}
         {missingUnique.map(s => <Chip key={s} label={s} color="#dc2626" bg="#fef2f2" icon="✗" />)}
       </div>
       {missingUnique.length > 0 && (
-        <div style={{ color: '#6b7280', marginTop: 6, fontSize: 11 }}>
+        <div style={{ color: colors.textMuted, marginTop: 6, fontSize: 11 }}>
           {missingUnique.length} required skill{missingUnique.length > 1 ? 's' : ''} missing
         </div>
       )}

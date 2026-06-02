@@ -6,6 +6,11 @@ export async function saveApplication(app: Application): Promise<void> {
   await db.put('applications', app)
 }
 
+export async function deleteApplication(id: string): Promise<void> {
+  const db = await getDB()
+  await db.delete('applications', id)
+}
+
 export async function getApplication(id: string): Promise<Application | undefined> {
   const db = await getDB()
   return db.get('applications', id)
@@ -37,5 +42,16 @@ export async function updateApplicationStatus(
   app.updatedAt = Date.now()
   app.timeline.push({ status, timestamp: Date.now(), note })
   if (status === 'applied' && !app.appliedAt) app.appliedAt = Date.now()
+  await saveApplication(app)
+}
+
+export async function updateApplicationJob(
+  id: string,
+  patch: Partial<Application['job']>,
+): Promise<void> {
+  const app = await getApplication(id)
+  if (!app) return
+  app.job = { ...app.job, ...patch }
+  app.updatedAt = Date.now()
   await saveApplication(app)
 }

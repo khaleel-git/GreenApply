@@ -53,16 +53,40 @@ export function extractLanguages(text: string): { reqs: LanguageRequirement[]; c
       const after = text.slice(end, end + 45)
       const beforeCefr = text.slice(Math.max(0, start - 18), start)
       const ctxWindow = text.slice(Math.max(0, start - 30), start) + ' ' + after
-      // Clause-bounded so a qualifier on a different language ("…; English optional")
-      // doesn't flip this one.
-      const afterClause = after.split(/[;.]/)[0]
+      // Clause-bounded: commas, semicolons, and periods all end the clause so a
+      // qualifier on a *different* language ("Deutschkenntnisse, Englischkenntnisse
+      // von Vorteil") can't flip the current language to optional.
+      const afterClause = after.split(/[;.,]/)[0]
 
+      // Priority 1: explicit CEFR tag (B2, C1…) adjacent to the mention
       let level: string | null = null
       const cefrAfter = after.match(CEFR_LEVEL_RE)
       const cefrBefore = beforeCefr.match(CEFR_LEVEL_RE)
       if (cefrAfter) level = cefrAfter[1].toUpperCase()
       else if (cefrBefore) level = cefrBefore[1].toUpperCase()
-  else level = inferLevel(ctxWindow)
+
+      // Priority 2: high-confidence compound match phrases (added to LANGUAGE_DEFS).
+      // Checked before ctxWindow so fließend/verhandlungssicher/native take precedence
+      // over the looser B2 inferences from "Wort und Schrift" in ctxWindow.
+      if (!level) {
+        const mText = m[0]
+        if (/^flie(?:ß|ss)end/i.test(mText))                           level = 'C1'    // "fließend Deutsch/Englisch"
+        else if (/(?:verhandlungs|business)[-\s]?sicher/i.test(mText)) level = 'C1'    // "verhandlungssicheres Deutsch"
+        else if (/als\s+Muttersprache\s*$/i.test(mText))               level = 'Native'// "Deutsch als Muttersprache"
+        else if (/in\s+Wort\s+und\s+Schrift\s*$/i.test(mText))        level = 'B2'    // "Deutsch in Wort und Schrift"
+        else if (/und\s+(?:Englisch|Deutsch)\s*$/i.test(mText))        level = 'B2'    // "Deutsch und Englisch"
+        else if (/^(?:auf\s+|in\s+(?:German|Deutsch)\b)/i.test(mText)) level = 'B2'   // "auf Deutsch", "in German"
+      }
+
+      // Priority 3: ctxWindow signals (CEFR near, fluency words, requirement keywords)
+      if (!level) level = inferLevel(ctxWindow)
+
+      // Priority 4: "gute/guten/…" directly before the language mention
+      if (!level) {
+        const preceding = text.slice(Math.max(0, start - 15), start).trimEnd()
+        const lastWord = preceding.split(/[\s,;(]+/).filter(Boolean).pop() ?? ''
+        if (/^gute[rnms]?$/i.test(lastWord)) level = 'B2'
+      }
 
       if (!level) continue  // bare mention, no requirement signal → skip
 

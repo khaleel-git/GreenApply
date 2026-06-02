@@ -37,3 +37,10 @@ export async function incrementMetric(key: keyof UsageMetrics, by = 1): Promise<
   const current = existing?.value ?? 0
   await db.put('metrics', { key, value: current + by })
 }
+
+export async function decrementMetric(key: keyof UsageMetrics, by = 1): Promise<void> {
+  const db = await getDB()
+  const existing = await db.get('metrics', key)
+  const current = existing?.value ?? 0
+  await db.put('metrics', { key, value: Math.max(0, current - by) })
+}

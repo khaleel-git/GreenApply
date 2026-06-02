@@ -10,3 +10,8 @@ export async function getExtraction(jobId: string): Promise<ExtractionResult | u
   const db = await getDB()
   return db.get('extractions', jobId)
 }
+
+export async function clearExtractions(): Promise<void> {
+  const db = await getDB()
+  await db.clear('extractions')
+}

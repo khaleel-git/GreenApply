@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { ThemeProvider, useTheme } from '../shared/ThemeContext'
 import type { UserProfile, LanguageEntry, AcademicProfile, DegreeLevel } from '../types'
 import { parsePdf } from '../background/parsers/pdf.parser'
 import { parseDocx } from '../background/parsers/docx.parser'
@@ -6,7 +7,7 @@ import { parseResumeDeterministic } from '../background/parsers/resume.parser'
 import { parseTranscript } from '../background/parsers/transcript.parser'
 import { buildResumeIndex } from '../background/nim/vectorstore'
 
-type Section = 'resume' | 'academic' | 'profile' | 'languages' | 'preferences' | 'api'
+type Section = 'resume' | 'export' | 'academic' | 'profile' | 'languages' | 'preferences' | 'api'
 
 // Default so every section is usable before a résumé is uploaded — saving creates
 // the profile on the backend.
@@ -22,6 +23,11 @@ const EMPTY_PROFILE: UserProfile = {
 }
 
 export function Options() {
+  return <ThemeProvider><OptionsInner /></ThemeProvider>
+}
+
+function OptionsInner() {
+  const { colors, theme, toggleTheme } = useTheme()
   const [section, setSection] = useState<Section>('resume')
   const [profile, setProfile] = useState<UserProfile>(EMPTY_PROFILE)
   const [saved, setSaved] = useState(false)
@@ -47,6 +53,7 @@ export function Options() {
 
   const nav: { id: Section; label: string }[] = [
     { id: 'resume', label: '📄 Resume' },
+    { id: 'export', label: '💾 Export / Import' },
     { id: 'academic', label: '🎓 Academic' },
     { id: 'profile', label: '👤 Profile' },
     { id: 'languages', label: '🗣️ Languages & Skills' },
@@ -55,18 +62,25 @@ export function Options() {
   ]
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', background: colors.bg, color: colors.text }}>
       {/* Sidebar */}
-      <div style={{ width: 220, background: '#f9fafb', borderRight: '1px solid #e5e7eb', padding: '24px 0' }}>
+      <div style={{ width: 220, background: colors.bgSecondary, borderRight: `1px solid ${colors.border}`, padding: '24px 0' }}>
         <div style={{ padding: '0 20px 20px', display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 20 }}>🟢</span>
-          <span style={{ fontSize: 16, fontWeight: 700, color: '#111827' }}>GreenApply</span>
+          <span style={{ fontSize: 16, fontWeight: 700, color: colors.text }}>GreenApply</span>
+          <button
+            onClick={toggleTheme}
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, padding: 0 }}
+          >
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </button>
         </div>
         {nav.map(({ id, label }) => (
           <button key={id} onClick={() => setSection(id)} style={{
             display: 'block', width: '100%', padding: '10px 20px', border: 'none',
-            background: section === id ? '#fff' : 'none', cursor: 'pointer', textAlign: 'left',
-            fontSize: 13, color: section === id ? '#16a34a' : '#374151',
+            background: section === id ? colors.bg : 'none', cursor: 'pointer', textAlign: 'left',
+            fontSize: 13, color: section === id ? '#16a34a' : colors.textSecondary,
             fontWeight: section === id ? 600 : 400,
             borderLeft: section === id ? '3px solid #16a34a' : '3px solid transparent',
           }}>
@@ -88,6 +102,7 @@ export function Options() {
         )}
 
         {section === 'resume' && <ResumeSection />}
+        {section === 'export' && <ExportImportSection />}
         {section === 'academic' && (
           <AcademicSection profile={profile} onSave={saveProfile} />
         )}
@@ -109,7 +124,27 @@ export function Options() {
 function ResumeSection() {
   const [status, setStatus] = useState<'idle' | 'uploading' | 'indexing' | 'done' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState('')
+  const [existingFile, setExistingFile] = useState<{ fileName: string; fileType: string; dataBase64: string; uploadedAt: number } | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    chrome.runtime.sendMessage({ type: 'GET_FILE', id: 'resume' }).then((f: any) => {
+      if (f) setExistingFile(f)
+    }).catch(() => {})
+  }, [])
+
+  function downloadResume() {
+    if (!existingFile) return
+    const mime = existingFile.fileType === 'pdf'
+      ? 'application/pdf'
+      : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    const a = document.createElement('a')
+    a.href = `data:${mime};base64,${existingFile.dataBase64}`
+    a.download = existingFile.fileName
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+  }
 
   async function handleFile(file: File) {
     if (!file) return
@@ -125,18 +160,29 @@ function ResumeSection() {
         ? await parsePdf(buffer)
         : await parseDocx(buffer)
       const resume = parseResumeDeterministic(raw, file.name, ext as 'pdf' | 'docx')
+      // Merge new resume skills with whatever the user has already saved
+      const currentProfile = await chrome.runtime.sendMessage({ type: 'GET_PROFILE' }).catch(() => null) as any
+      const existingSkills: string[] = currentProfile?.skills ?? []
+      const mergedSkills = [...new Set([...existingSkills, ...(resume.skills ?? [])])]
+      // Save parsed resume into profile and upload raw file bytes to SW so
+      // exported config can include the original uploaded file.
+      await chrome.runtime.sendMessage({ type: 'UPLOAD_RESUME', fileName: file.name, fileBuffer: buffer, fileType: ext })
       await chrome.runtime.sendMessage({
         type: 'SAVE_PROFILE',
         profile: {
           resume,
           languages: resume.languages,
-          skills: resume.skills,  // pre-populate editable skills field from resume
+          skills: mergedSkills,
         },
       })
       // Build vector index for cover letter generation (requires API key)
       setStatus('indexing')
       await buildResumeIndex(resume).catch(() => { /* no API key yet — index built later */ })
       setStatus('done')
+      // Refresh the existing-file card
+      chrome.runtime.sendMessage({ type: 'GET_FILE', id: 'resume' }).then((f: any) => {
+        if (f) setExistingFile(f)
+      }).catch(() => {})
     } catch (e) {
       setStatus('error')
       setErrorMsg(String(e))
@@ -149,6 +195,30 @@ function ResumeSection() {
       <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 20 }}>
         Upload your resume to enable job matching. Parsed locally — no data is sent anywhere without your API key.
       </p>
+
+      {existingFile && status === 'idle' && (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '12px 16px', marginBottom: 16, borderRadius: 10,
+          background: '#f0fdf4', border: '1px solid #bbf7d0',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 22 }}>{existingFile.fileType === 'pdf' ? '📄' : '📝'}</span>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>{existingFile.fileName}</div>
+              <div style={{ fontSize: 11, color: '#6b7280', marginTop: 1 }}>
+                Uploaded {new Date(existingFile.uploadedAt).toLocaleDateString()}
+              </div>
+            </div>
+          </div>
+          <button onClick={downloadResume} style={{
+            padding: '6px 14px', borderRadius: 8, border: '1px solid #16a34a',
+            background: '#fff', color: '#16a34a', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+          }}>
+            ↓ Download
+          </button>
+        </div>
+      )}
 
       <div
         onDragOver={e => e.preventDefault()}
@@ -165,6 +235,7 @@ function ResumeSection() {
           {status === 'uploading' ? 'Parsing resume…'
             : status === 'indexing' ? 'Building cover letter index…'
             : status === 'done' ? '✓ Resume uploaded and indexed'
+            : existingFile ? 'Drop a new PDF or DOCX here to replace'
             : 'Drop PDF or DOCX here, or click to browse'}
         </div>
         {status === 'idle' && (
@@ -182,6 +253,7 @@ function ResumeSection() {
 }
 
 function ProfileSection({ profile, onSave }: { profile: UserProfile; onSave: (p: Partial<UserProfile>) => void }) {
+  const inputStyle = useInputStyle()
   const [name, setName] = useState(profile.name)
   const [location, setLocation] = useState(profile.location)
   const [workAuth, setWorkAuth] = useState(profile.workAuth)
@@ -197,18 +269,17 @@ function ProfileSection({ profile, onSave }: { profile: UserProfile; onSave: (p:
         <input value={name} onChange={e => setName(e.target.value)} style={inputStyle} />
       </Field>
 
-      <Field label="Current location (city)">
+      <Field label="Location">
         <input value={location} onChange={e => setLocation(e.target.value)} placeholder="Berlin, Germany" style={inputStyle} />
       </Field>
 
       <Field label="Work authorization">
         <select value={workAuth} onChange={e => setWorkAuth(e.target.value as UserProfile['workAuth'])} style={inputStyle}>
           <option value="citizen">EU Citizen</option>
-          <option value="permanent_resident">Permanent Resident</option>
-          <option value="eu_blue_card">EU Blue Card</option>
+          <option value="eu_freedom_of_movement">EU Freedom of Movement</option>
+          <option value="blue_card">EU Blue Card</option>
           <option value="work_permit">Work Permit</option>
-          <option value="student_visa">Student Visa</option>
-          <option value="needs_sponsorship">Needs Visa Sponsorship</option>
+          <option value="needs_sponsorship">Needs Sponsorship</option>
         </select>
       </Field>
 
@@ -224,7 +295,10 @@ const CEFR_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'Native']
 
 function LanguagesSkillsSection({ profile, onSave }: { profile: UserProfile; onSave: (p: Partial<UserProfile>) => void }) {
   const [languages, setLanguages] = useState<LanguageEntry[]>(
-    profile.languages.length ? profile.languages : [{ language: 'German', level: 'B1' }],
+    profile.languages.length ? profile.languages : [
+      { language: 'German', level: 'B1' },
+      { language: 'English', level: 'C1' },
+    ],
   )
   const [skills, setSkills] = useState((profile.skills ?? []).join(', '))
 
@@ -394,18 +468,140 @@ function PreferencesSection({ profile, onSave }: { profile: UserProfile; onSave:
   )
 }
 
+function ExportImportSection() {
+  const fileRef = useRef<HTMLInputElement>(null)
+  const [importStatus, setImportStatus] = useState<string | null>(null)
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [importPayload, setImportPayload] = useState<any>(null)
+  const [importPreview, setImportPreview] = useState<Record<string, number | boolean>>({})
+  const [importMode, setImportMode] = useState<'merge' | 'replace'>('merge')
+
+  return (
+    <div>
+      <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4, color: '#111827' }}>Export / Import</h2>
+      <p style={{ fontSize: 12, color: '#6b7280', marginTop: 0, marginBottom: 8 }}>
+        Export your configuration (resume, profile, skills, preferences, rules, and related data) to a JSON file. Import to restore it later without re-uploading your résumé.
+      </p>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <button onClick={async () => {
+          try {
+            const data = await chrome.runtime.sendMessage({ type: 'EXPORT_CONFIG' })
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `greenapply-config-${new Date().toISOString().slice(0,10)}.json`
+            document.body.appendChild(a)
+            a.click()
+            a.remove()
+            URL.revokeObjectURL(url)
+          } catch (e) {
+            // eslint-disable-next-line no-console
+            console.error('Export failed', e)
+          }
+        }} style={{ ...primaryBtn, background: '#0f766e' }}>
+          Export Configuration
+        </button>
+
+        <input ref={fileRef} type="file" accept="application/json" style={{ display: 'none' }}
+          onChange={async e => {
+            const f = e.target.files?.[0]
+            if (!f) return
+            setImportStatus(null)
+            try {
+              const text = await f.text()
+              const parsed = JSON.parse(text)
+              const preview: Record<string, number | boolean> = {
+                profile: !!parsed.profile,
+                jobs: Array.isArray(parsed.jobs) ? parsed.jobs.length : 0,
+                applications: Array.isArray(parsed.applications) ? parsed.applications.length : 0,
+                files: Array.isArray(parsed.files) ? parsed.files.length : 0,
+                resumeChunks: Array.isArray(parsed.resumeChunks) ? parsed.resumeChunks.length : 0,
+                rules: Array.isArray(parsed.rules) ? parsed.rules.length : 0,
+                metrics: Array.isArray(parsed.metrics) ? parsed.metrics.length : 0,
+                companies: Array.isArray(parsed.companies) ? parsed.companies.length : 0,
+                extractions: Array.isArray(parsed.extractions) ? parsed.extractions.length : 0,
+                matches: Array.isArray(parsed.matches) ? parsed.matches.length : 0,
+              }
+              setImportPayload(parsed)
+              setImportPreview(preview)
+              setShowImportModal(true)
+            } catch (err) {
+              setImportStatus('Invalid JSON file')
+              setTimeout(() => setImportStatus(null), 3000)
+              if (fileRef.current) fileRef.current.value = ''
+            }
+          }} />
+
+        <button onClick={() => fileRef.current?.click()} style={{ padding: '10px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer' }}>
+          Import Configuration
+        </button>
+        {importStatus && <div style={{ fontSize: 12, color: '#374151' }}>{importStatus}</div>}
+      </div>
+
+      {showImportModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+          <div style={{ background: '#fff', padding: 20, borderRadius: 8, width: 520, boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
+            <h3 style={{ marginTop: 0 }}>Confirm Import</h3>
+            <p style={{ color: '#6b7280' }}>This will overwrite or merge data in your extension based on the selected mode. Review the counts below and confirm to proceed.</p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 12 }}>
+              {Object.entries(importPreview).map(([k, v]) => (
+                <div key={k} style={{ padding: 8, border: '1px solid #e5e7eb', borderRadius: 6, fontSize: 13 }}>
+                  <strong style={{ textTransform: 'capitalize' }}>{k}</strong>: {String(v)}
+                </div>
+              ))}
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <label style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                <input type="radio" name="importMode" checked={importMode === 'merge'} onChange={() => setImportMode('merge')} /> Merge (safe)
+              </label>
+              <label style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 6 }}>
+                <input type="radio" name="importMode" checked={importMode === 'replace'} onChange={() => setImportMode('replace')} /> Replace (overwrite all)
+              </label>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+              <button onClick={() => {
+                setShowImportModal(false)
+                if (fileRef.current) fileRef.current.value = ''
+              }} style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #d1d5db', background: '#fff' }}>Cancel</button>
+              <button onClick={async () => {
+                if (!importPayload) return
+                setImportStatus('Importing...')
+                setShowImportModal(false)
+                try {
+                  await chrome.runtime.sendMessage({ type: 'IMPORT_CONFIG', payload: importPayload, mode: importMode })
+                  setImportStatus('Import successful')
+                } catch (err) {
+                  setImportStatus('Import failed')
+                }
+                setTimeout(() => setImportStatus(null), 2500)
+                if (fileRef.current) fileRef.current.value = ''
+              }} style={{ padding: '8px 12px', borderRadius: 6, border: 'none', background: '#16a34a', color: '#fff' }}>Confirm Import</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function ApiSection() {
+  const inputStyle = useInputStyle()
   const [key, setKey] = useState('')
   const [saved, setSaved] = useState(false)
 
   useEffect(() => {
-    chrome.storage.local.get('nvidiaApiKey').then(r => {
-      if (r.nvidiaApiKey) setKey(r.nvidiaApiKey)
-    })
+    // Source of truth is chrome.storage.local (what the NIM client reads)
+    chrome.storage.local.get('nvidiaApiKey').then(res => {
+      if (res.nvidiaApiKey) setKey(res.nvidiaApiKey as string)
+    }).catch(() => {})
   }, [])
 
   async function handleSave() {
-    await chrome.storage.local.set({ nvidiaApiKey: key.trim() })
+    // Write to chrome.storage.local so the NIM client picks it up immediately
+    await chrome.storage.local.set({ nvidiaApiKey: key })
+    // Also mirror to profile so it's included in exports
+    await chrome.runtime.sendMessage({ type: 'SAVE_PROFILE', profile: { nimApiKey: key } }).catch(() => {})
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
@@ -414,8 +610,7 @@ function ApiSection() {
     <div>
       <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4, color: '#111827' }}>AI Features</h2>
       <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 20 }}>
-        Optional. Provide an NVIDIA NIM API key to unlock AI-generated score explanations and cover letter generation.
-        The key is stored locally and never shared.
+        Enter your NVIDIA NIM API key to enable cover letter generation and resume-to-job semantic matching.
       </p>
       <Field label="NVIDIA NIM API Key">
         <input
@@ -456,7 +651,10 @@ function AcademicSection({ profile, onSave }: { profile: UserProfile; onSave: (u
   const [uploadedFileNames, setUploadedFileNames] = useState<string[]>(existing?.uploadedFileNames ?? [])
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'parsing' | 'done' | 'error'>('idle')
   const [uploadError, setUploadError] = useState('')
+  const [certUploadStatus, setCertUploadStatus] = useState<'idle' | 'parsing' | 'done' | 'error'>('idle')
+  const [certUploadError, setCertUploadError] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+  const certInputRef = useRef<HTMLInputElement>(null)
 
   async function handleDocUpload(file: File) {
     const ext = file.name.split('.').pop()?.toLowerCase()
@@ -483,6 +681,35 @@ function AcademicSection({ profile, onSave }: { profile: UserProfile; onSave: (u
     } catch (e) {
       setUploadError(String(e))
       setUploadStatus('error')
+    }
+  }
+
+  async function handleCertUpload(file: File) {
+    const ext = file.name.split('.').pop()?.toLowerCase()
+    if (ext !== 'pdf' && ext !== 'docx') {
+      setCertUploadError('Only PDF and DOCX supported')
+      setCertUploadStatus('error')
+      return
+    }
+    setCertUploadStatus('parsing')
+    setCertUploadError('')
+    try {
+      const buffer = await file.arrayBuffer()
+      const raw = ext === 'pdf' ? await parsePdf(buffer) : await parseDocx(buffer)
+      const result = parseTranscript(raw)
+      const extracted = result.certifications
+      if (extracted.length > 0) {
+        setCertifications(prev => [...new Set([...prev, ...extracted])])
+        setCertUploadStatus('done')
+      } else {
+        // Fallback: use filename (without extension) as cert name
+        const name = file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ')
+        setCertifications(prev => [...new Set([...prev, name])])
+        setCertUploadStatus('done')
+      }
+    } catch (e) {
+      setCertUploadError(String(e))
+      setCertUploadStatus('error')
     }
   }
 
@@ -616,6 +843,34 @@ function AcademicSection({ profile, onSave }: { profile: UserProfile; onSave: (u
 
       {/* Certifications */}
       <Field label="Online Certifications">
+        <div
+          onClick={() => certInputRef.current?.click()}
+          onDragOver={e => e.preventDefault()}
+          onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleCertUpload(f) }}
+          style={{
+            border: '2px dashed #d1d5db', borderRadius: 10, padding: '14px 16px',
+            textAlign: 'center', cursor: 'pointer', background: '#f9fafb', marginBottom: 10,
+          }}
+        >
+          <div style={{ fontSize: 18, marginBottom: 4 }}>🏅</div>
+          <div style={{ fontSize: 13, color: '#374151', fontWeight: 500 }}>
+            Drop certificate PDF or DOCX here, or click to upload
+          </div>
+          <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
+            Coursera · Udemy · AWS · Google · any certificate document
+          </div>
+          <input ref={certInputRef} type="file" accept=".pdf,.docx" style={{ display: 'none' }}
+            onChange={e => { const f = e.target.files?.[0]; if (f) handleCertUpload(f); if (certInputRef.current) certInputRef.current.value = '' }} />
+        </div>
+        {certUploadStatus === 'parsing' && (
+          <div style={{ marginBottom: 8, fontSize: 12, color: '#6b7280' }}>⏳ Extracting certification name…</div>
+        )}
+        {certUploadStatus === 'done' && (
+          <div style={{ marginBottom: 8, fontSize: 12, color: '#16a34a' }}>✓ Certification added</div>
+        )}
+        {certUploadStatus === 'error' && (
+          <div style={{ marginBottom: 8, fontSize: 12, color: '#dc2626' }}>Error: {certUploadError}</div>
+        )}
         <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
           <input style={{ ...inputStyle, flex: 1 }} placeholder="e.g. Machine Learning Specialization (Coursera, 2024)"
             value={newCert} onChange={e => setNewCert(e.target.value)}
@@ -646,9 +901,10 @@ function AcademicSection({ profile, onSave }: { profile: UserProfile; onSave: (u
 // ─────────────────────────────────────────────────────────────────────────────
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  const { colors } = useTheme()
   return (
     <div style={{ marginBottom: 16 }}>
-      <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>
+      <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: colors.textSecondary, marginBottom: 6 }}>
         {label}
       </label>
       {children}
@@ -656,6 +912,16 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
+function useInputStyle(): React.CSSProperties {
+  const { colors } = useTheme()
+  return {
+    width: '100%', padding: '8px 12px', borderRadius: 8,
+    border: `1px solid ${colors.inputBorder}`, fontSize: 13, outline: 'none',
+    boxSizing: 'border-box', background: colors.inputBg, color: colors.text,
+  }
+}
+
+// Legacy alias used by sub-sections — replaced section by section with useInputStyle()
 const inputStyle: React.CSSProperties = {
   width: '100%', padding: '8px 12px', borderRadius: 8,
   border: '1px solid #d1d5db', fontSize: 13, outline: 'none',

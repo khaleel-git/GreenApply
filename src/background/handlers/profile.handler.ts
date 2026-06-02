@@ -33,6 +33,13 @@ export async function handleSaveProfile(partial: Partial<UserProfile>): Promise<
   const profile: UserProfile = { ...base, ...existing, ...partial, updatedAt: now }
   await saveProfile(profile)
 
+  // Mirror API key to chrome.storage.local so the NIM client can read it
+  const nimKey = (partial as any).nimApiKey
+  if (nimKey !== undefined) {
+    if (nimKey) await chrome.storage.local.set({ nvidiaApiKey: nimKey })
+    else await chrome.storage.local.remove('nvidiaApiKey')
+  }
+
   // Profile changed → previously cached match scores are stale. Clear them so the
   // next job visit re-scores against the updated languages / skills / preferences.
   await clearMatches()

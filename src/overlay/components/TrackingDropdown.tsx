@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import type { ApplicationStatus } from '../../types'
+import { useTheme } from '../../shared/ThemeContext'
 
 const STATUSES: { value: ApplicationStatus; label: string; color: string }[] = [
   { value: 'saved', label: 'Saved', color: '#6b7280' },
@@ -52,6 +53,7 @@ export function TrackingDropdown({ jobId }: Props) {
     }
   }
 
+  const { colors } = useTheme()
   const current = STATUSES.find(s => s.value === status) ?? STATUSES[0]
 
   return (
@@ -62,7 +64,7 @@ export function TrackingDropdown({ jobId }: Props) {
         style={{
           width: '100%', padding: '7px 12px', borderRadius: 8,
           border: `1px solid ${current.color}40`,
-          background: `${current.color}10`,
+          background: `${current.color}15`,
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           cursor: 'pointer', fontSize: 12, fontWeight: 600, color: current.color,
         }}
@@ -74,8 +76,8 @@ export function TrackingDropdown({ jobId }: Props) {
       {open && (
         <div style={{
           position: 'absolute', bottom: '100%', left: 0, right: 0, marginBottom: 4,
-          background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8,
-          boxShadow: '0 4px 16px rgba(0,0,0,0.12)', overflow: 'hidden', zIndex: 10,
+          background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: 8,
+          boxShadow: colors.shadow, overflow: 'hidden', zIndex: 10,
         }}>
           {STATUSES.map(s => (
             <button
@@ -83,7 +85,7 @@ export function TrackingDropdown({ jobId }: Props) {
               onClick={() => handleStatusChange(s.value)}
               style={{
                 display: 'block', width: '100%', padding: '8px 14px',
-                border: 'none', background: s.value === status ? `${s.color}10` : '#fff',
+                border: 'none', background: s.value === status ? `${s.color}15` : colors.bg,
                 cursor: 'pointer', textAlign: 'left', fontSize: 12,
                 fontWeight: s.value === status ? 700 : 400, color: s.color,
               }}

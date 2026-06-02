@@ -110,10 +110,71 @@ export function detectFieldOfStudy(text: string): string | undefined {
   return undefined
 }
 
+// ─── Certification extraction ─────────────────────────────────────────────────
+
+const CERT_PLATFORMS = /\b(coursera|udemy|edx|linkedin\s+learning|pluralsight|datacamp|udacity|codecademy|google|aws|amazon|microsoft|azure|oracle|cisco|comptia|pmi|scrum|salesforce|tableau|futurelearn|harvard|stanford|deeplearning\.?ai)\b/i
+
+const CERT_TITLE_PATTERNS: RegExp[] = [
+  /certificate\s+(?:of\s+)?(?:completion|achievement|attendance|participation|proficiency|excellence)\s+in\s+(.+)/i,
+  /certified\s+(.{5,100})/i,
+  /certification\s+in\s+(.+)/i,
+  /has\s+(?:successfully\s+)?completed\s+(.{5,120})/i,
+  /awarded\s+(?:to\s+\S+\s+for\s+)?(.{5,120})/i,
+  /this\s+is\s+to\s+certify\s+that\s+\S+\s+has\s+completed\s+(.+)/i,
+]
+
+export function extractCertificationsFromText(text: string): string[] {
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean)
+  const certs: string[] = []
+  const seen = new Set<string>()
+
+  function add(s: string) {
+    const clean = s.replace(/\s{2,}/g, ' ').trim()
+    if (clean.length < 6 || clean.length > 150) return
+    const key = clean.toLowerCase()
+    if (!seen.has(key)) { seen.add(key); certs.push(clean) }
+  }
+
+  // Look for structured title patterns in first 40 lines
+  for (const line of lines.slice(0, 40)) {
+    for (const pat of CERT_TITLE_PATTERNS) {
+      const m = line.match(pat)
+      if (m?.[1]) { add(m[1]); break }
+    }
+  }
+
+  // If nothing found, look near platform mentions
+  if (certs.length === 0) {
+    for (let i = 0; i < Math.min(lines.length, 60); i++) {
+      if (!CERT_PLATFORMS.test(lines[i])) continue
+      for (let j = Math.max(0, i - 4); j <= Math.min(lines.length - 1, i + 4); j++) {
+        const nearby = lines[j]
+        if (nearby.length > 8 && nearby.length < 150 && !CERT_PLATFORMS.test(nearby) && !/^\d/.test(nearby)) {
+          add(nearby)
+        }
+      }
+      break
+    }
+  }
+
+  // Fallback: first meaningful line in the document as the cert name
+  if (certs.length === 0) {
+    for (const line of lines.slice(0, 15)) {
+      if (line.length >= 10 && line.length <= 150 && /[a-zA-Z]/.test(line)) {
+        add(line)
+        break
+      }
+    }
+  }
+
+  return certs
+}
+
 // ─── Main entry point ─────────────────────────────────────────────────────────
 
 export interface TranscriptParseResult {
   courses: string[]
+  certifications: string[]
   university?: string
   degreeHint?: DegreeLevel
   fieldOfStudy?: string
@@ -122,6 +183,7 @@ export interface TranscriptParseResult {
 export function parseTranscript(rawText: string): TranscriptParseResult {
   return {
     courses: extractCoursesFromText(rawText),
+    certifications: extractCertificationsFromText(rawText),
     university: detectUniversity(rawText),
     degreeHint: detectDegreeHint(rawText),
     fieldOfStudy: detectFieldOfStudy(rawText),

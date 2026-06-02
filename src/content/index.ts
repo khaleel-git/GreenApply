@@ -81,36 +81,35 @@ const extractors: Record<string, typeof genericExtractor> = {
 // chrome.runtime is undefined. Bail out immediately in that case.
 if (typeof chrome === 'undefined' || !chrome.runtime) {
   // Not an extension context (e.g. sandboxed iframe) — do nothing.
-  // Avoid throwing so the page doesn't surface an error to the console.
-  // Some pages (or reloads) may inject content scripts where chrome is unavailable.
   // eslint-disable-next-line no-console
   console.warn('GreenApply: no extension context, content script exiting.')
 } else {
   let overlayMounted = false
+  let extensionEnabled = true  // optimistic default; corrected by async storage read below
+
+  // React to the popup toggle while the page is already loaded
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== 'local' || !('extensionEnabled' in changes)) return
+    extensionEnabled = changes.extensionEnabled.newValue !== false
+    if (!extensionEnabled && overlayMounted) {
+      unmountShadowHost()
+      overlayMounted = false
+    }
+  })
 
   function handleNavigation(): void {
+    if (!extensionEnabled) return
+
     const url = location.href
 
-    // ── Application form mode ──────────────────────────────────────────────
+    // ── Application form pages: skip entirely ─────────────────────────────
+    // These are the "apply" steps after a user clicks Apply on a job listing.
+    // Running job analysis here is wasteful — the page content isn't a job description.
     if (isApplicationFormPage(url, document)) {
-      if (!overlayMounted) {
-        const shadow = mountShadowHost()
-        mountOverlay(shadow)
-        overlayMounted = true
+      if (overlayMounted) {
+        unmountShadowHost()
+        overlayMounted = false
       }
-      // Debounce: wait briefly so dynamic ATS forms finish rendering
-      setTimeout(() => {
-        const questions = extractFormQuestions()
-        // Notify overlay immediately (local — no round-trip) so it can show
-        // the questions list while waiting for AI answers from the background.
-        window.dispatchEvent(new CustomEvent('greenapply:message', {
-          detail: { type: 'APPLICATION_LOADING', questions },
-        }))
-        if (!chrome.runtime?.id) return
-        try {
-          chrome.runtime.sendMessage({ type: 'APPLICATION_QA', questions }).catch(() => {})
-        } catch { /* orphaned context */ }
-      }, 800)
       return
     }
 
@@ -159,8 +158,7 @@ if (typeof chrome === 'undefined' || !chrome.runtime) {
     })
   } catch { /* extension reloaded — content script orphaned, ignore */ }
 
-  // Listen for fill-field events emitted by the overlay (runs inside shadow DOM
-  // so it uses window events to cross the shadow boundary).
+  // Listen for fill-field events emitted by the overlay (cross-shadow-boundary).
   window.addEventListener('greenapply:fill', (e: Event) => {
     const { selector, value, isCombobox } = (e as CustomEvent<{
       selector: string; value: string; isCombobox?: boolean
@@ -169,7 +167,20 @@ if (typeof chrome === 'undefined' || !chrome.runtime) {
     else fillField(selector, value)
   })
 
-  startObserver(handleNavigation)
-  startFeedAnnotation()
-  startGenericListingScan()
+  // Read the enabled flag from storage, then start observers.
+  // Wrapping in storage.get means we never run on pages visited while disabled.
+  chrome.storage.local.get('extensionEnabled').then(({ extensionEnabled: stored }) => {
+    extensionEnabled = stored !== false
+    if (!extensionEnabled) return
+    startObserver(handleNavigation)
+    startFeedAnnotation()
+    startGenericListingScan()
+    handleNavigation()
+  }).catch(() => {
+    // Storage unavailable — start anyway with the optimistic default (enabled)
+    startObserver(handleNavigation)
+    startFeedAnnotation()
+    startGenericListingScan()
+    handleNavigation()
+  })
 }

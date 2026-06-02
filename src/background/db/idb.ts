@@ -54,7 +54,7 @@ let db: IDBPDatabase<GreenApplyDB> | null = null
 
 export async function getDB(): Promise<IDBPDatabase<GreenApplyDB>> {
   if (db) return db
-  db = await openDB<GreenApplyDB>('greenapply', 5, {
+  db = await openDB<GreenApplyDB>('greenapply', 6, {
     upgrade(database, oldVersion, _newVersion, transaction) {
       // v3: language extraction now uses AI-first parsing and expanded phrasing
       // coverage, so drop cached extractions/matches to force a re-analysis.
@@ -65,6 +65,9 @@ export async function getDB(): Promise<IDBPDatabase<GreenApplyDB>> {
       // v4: resume vector index for cover letter generation
       if (!database.objectStoreNames.contains('resumeChunks')) {
         database.createObjectStore('resumeChunks', { keyPath: 'id' })
+      }
+      if (!database.objectStoreNames.contains('files')) {
+        database.createObjectStore('files', { keyPath: 'id' })
       }
       // v5: fixed German false-positive — bare "Deutsch" (nav switcher) was matching
       // the language regex; LLM language inference also removed. Clear cache so all
