@@ -1,0 +1,1 @@
+typeof window>"u"&&(globalThis.window=globalThis);const s={skills:.33,experience:.24,language:.22,location:.11,salaryMatch:.05,employmentType:.05},e={freshDays:7,freshBoost:5,normalDays:30,staleThreshold:60,stalePenalty:-5,veryStaleModifier:-15},a={green:75,yellow:50,orange:35},E=.7,o=.5,n=.75,l=15;export{E as C,o as E,e as F,a as S,l as T,n as a,s as b};

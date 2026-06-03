@@ -1,0 +1,164 @@
+{
+  "manifest_version": 3,
+  "name": "GreenApply",
+  "version": "0.1.0",
+  "description": "Know before you apply. Instant job-fit scoring for international students in Germany.",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://*.linkedin.com/*",
+    "https://*.indeed.com/*",
+    "https://*.glassdoor.com/*",
+    "https://*.glassdoor.de/*",
+    "https://*.stepstone.de/*",
+    "https://*.fetchjobs.co/*",
+    "https://fetchjobs.co/*",
+    "https://boards.greenhouse.io/*",
+    "https://jobs.lever.co/*",
+    "https://*.myworkdayjobs.com/*",
+    "https://jobs.ashbyhq.com/*",
+    "https://*.personio.de/*",
+    "https://www.jobs.tu-berlin.de/*",
+    "https://*.successfactors.com/*",
+    "https://*.successfactors.eu/*",
+    "https://*.taleo.net/*",
+    "https://*.bamboohr.com/*",
+    "https://*.icims.com/*",
+    "https://*.recruitee.com/*",
+    "https://*.softgarden.de/*",
+    "https://*.softgarden.io/*",
+    "https://*.smartrecruiters.com/*",
+    "https://*.greenhouse.io/*",
+    "https://*.lever.co/*",
+    "https://*.workday.com/*",
+    "https://*.ashbyhq.com/*",
+    "https://*.xing.com/*",
+    "https://*.jobteaser.com/*",
+    "https://*.absolventa.de/*",
+    "https://*.workwise.io/*",
+    "https://*.campusjaeger.de/*",
+    "https://*.join.com/*",
+    "https://*.monster.de/*",
+    "https://*.monster.com/*",
+    "https://*.jobware.de/*",
+    "https://integrate.api.nvidia.com/*"
+  ],
+  "optional_host_permissions": [
+    "*://*/*"
+  ],
+  "background": {
+    "service_worker": "service-worker-loader.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "js": [
+        "assets/index.ts-loader-BiJ0GnEi.js"
+      ],
+      "matches": [
+        "https://*.linkedin.com/*",
+        "https://*.indeed.com/*",
+        "https://*.glassdoor.com/*",
+        "https://*.glassdoor.de/*",
+        "https://*.stepstone.de/*",
+        "https://*.fetchjobs.co/*",
+        "https://fetchjobs.co/*",
+        "https://boards.greenhouse.io/*",
+        "https://jobs.lever.co/*",
+        "https://*.myworkdayjobs.com/*",
+        "https://jobs.ashbyhq.com/*",
+        "https://*.personio.de/*",
+        "https://www.jobs.tu-berlin.de/*",
+        "https://*.successfactors.com/*",
+        "https://*.successfactors.eu/*",
+        "https://*.taleo.net/*",
+        "https://*.bamboohr.com/*",
+        "https://*.icims.com/*",
+        "https://*.recruitee.com/*",
+        "https://*.softgarden.de/*",
+        "https://*.softgarden.io/*",
+        "https://jobs.smartrecruiters.com/*",
+        "https://*.xing.com/*",
+        "https://*.jobteaser.com/*",
+        "https://*.absolventa.de/*",
+        "https://*.workwise.io/*",
+        "https://*.join.com/*",
+        "https://*.monster.de/*",
+        "https://*.monster.com/*",
+        "https://*.jobware.de/*"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "matches": [
+        "*://*/*"
+      ],
+      "resources": [
+        "assets/*"
+      ],
+      "use_dynamic_url": false
+    },
+    {
+      "matches": [
+        "https://*.absolventa.de/*",
+        "https://*.bamboohr.com/*",
+        "https://*.fetchjobs.co/*",
+        "https://*.glassdoor.com/*",
+        "https://*.glassdoor.de/*",
+        "https://*.icims.com/*",
+        "https://*.indeed.com/*",
+        "https://*.jobteaser.com/*",
+        "https://*.jobware.de/*",
+        "https://*.join.com/*",
+        "https://*.linkedin.com/*",
+        "https://*.monster.com/*",
+        "https://*.monster.de/*",
+        "https://*.myworkdayjobs.com/*",
+        "https://*.personio.de/*",
+        "https://*.recruitee.com/*",
+        "https://*.softgarden.de/*",
+        "https://*.softgarden.io/*",
+        "https://*.stepstone.de/*",
+        "https://*.successfactors.com/*",
+        "https://*.successfactors.eu/*",
+        "https://*.taleo.net/*",
+        "https://*.workwise.io/*",
+        "https://*.xing.com/*",
+        "https://boards.greenhouse.io/*",
+        "https://fetchjobs.co/*",
+        "https://jobs.ashbyhq.com/*",
+        "https://jobs.lever.co/*",
+        "https://jobs.smartrecruiters.com/*",
+        "https://www.jobs.tu-berlin.de/*"
+      ],
+      "resources": [
+        "assets/freshness-D7BxQTuG.js",
+        "assets/ThemeContext-DR_ST83l.js",
+        "assets/score.utils-DfZPBw3m.js",
+        "assets/scoring-Db0H6Abf.js",
+        "assets/index.ts-CqN6iXlv.js"
+      ],
+      "use_dynamic_url": false
+    }
+  ],
+  "action": {
+    "default_popup": "src/popup/index.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "options_page": "src/options/index.html",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
