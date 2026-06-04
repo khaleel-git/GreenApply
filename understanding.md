@@ -90,16 +90,18 @@ Below are the most important folders and example files with short, non-technical
 ## Simple data flow (visual)
 
 ```mermaid
+```mermaid
 flowchart LR
   A[User / Browser] --> B[Content script: detect & extract]
   B -->|send job| C[Background service worker]
-  C --> D[Extraction pipeline (jsonld → regex → dict)]
+  C --> D[Extraction pipeline: jsonld / regex / dict]
   D --> E[Scoring engine]
   E --> F[DB stores (cache results)]
-  E --> G[Overlay (score shown on page)]
-  G -->|user clicks| H[Popup / Options (profile, resume upload)]
+  E --> G[Overlay: score shown on page]
+  G -->|user clicks| H[Popup / Options: profile / resume upload]
   H -->|save profile| F
-  D -->|low confidence| I[Optional LLM fallback (post-MVP)]
+  D -->|low confidence| I[Optional LLM fallback: post-MVP]
+```
 ```
 
 ---
