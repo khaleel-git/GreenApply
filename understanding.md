@@ -95,7 +95,7 @@ flowchart LR
   B -->|send job| C[Background service worker]
   C --> D[Extraction pipeline: jsonld / regex / dict]
   D --> E[Scoring engine]
-  E --> F[DB stores (cache results)]
+  E --> F[DB stores - cache results]
   E --> G[Overlay: score shown on page]
   G -->|user clicks| H[Popup / Options: profile / resume upload]
   H -->|save profile| F
