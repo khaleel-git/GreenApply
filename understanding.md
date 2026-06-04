@@ -90,7 +90,6 @@ Below are the most important folders and example files with short, non-technical
 ## Simple data flow (visual)
 
 ```mermaid
-```mermaid
 flowchart LR
   A[User / Browser] --> B[Content script: detect & extract]
   B -->|send job| C[Background service worker]
