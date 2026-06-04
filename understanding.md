@@ -142,3 +142,22 @@ These files are written in readable TypeScript. If you want help opening or step
 ---
 
 If you want, I can convert this guide into a shorter quick-start checklist, produce annotated screenshots, or run the deeper audit next.
+
+---
+
+## Annotated screenshots
+
+Below are example screenshots (captured from mock pages) that illustrate the user-facing UI described above.
+
+Options — Resume upload:
+
+![Options — Resume upload](screenshots/real/options-upload.png)
+
+Job page — Overlay and score badge:
+
+![Job page — Overlay](screenshots/real/job-overlay.png)
+
+Popup — Dashboard / Saved jobs:
+
+![Popup — Dashboard](screenshots/real/popup-dashboard.png)
+

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700">
+  <rect width="100%" height="100%" fill="#f8fafc"/>
+  <rect x="60" y="60" width="1080" height="580" rx="12" fill="#ffffff" stroke="#e6eef8"/>
+  <text x="120" y="140" font-family="Arial, Helvetica, sans-serif" font-size="32" fill="#0f172a">Options — Resume Upload (placeholder)</text>
+  <rect x="120" y="200" width="420" height="260" rx="8" fill="#f1f5f9" stroke="#e2e8f0"/>
+  <text x="150" y="260" font-family="Arial" font-size="18" fill="#334155">Drop your resume here (PDF/DOCX)</text>
+  <rect x="620" y="200" width="420" height="120" rx="8" fill="#f1f5f9" stroke="#e2e8f0"/>
+  <text x="650" y="240" font-family="Arial" font-size="18" fill="#334155">Profile preview</text>
+  <text x="120" y="540" font-family="Arial" font-size="14" fill="#475569">File: sample_resume.pdf — parsed: 24 skills, languages: English (native), German (B1)</text>
+</svg>
