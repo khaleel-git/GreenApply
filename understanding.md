@@ -101,7 +101,6 @@ flowchart LR
   H -->|save profile| F
   D -->|low confidence| I[Optional LLM fallback: post-MVP]
 ```
-```
 
 ---
 
